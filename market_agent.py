@@ -13,7 +13,9 @@ Educational tool. Rule-based signals are NOT investment advice.
 """
 import os, sys, time, json, argparse, datetime as dt
 from zoneinfo import ZoneInfo
-import numpy as np, pandas as pd
+import numpy as np, pandas as pd, warnings
+warnings.filterwarnings("ignore", module="yfinance")      # hide harmless pandas deprecation noise from yfinance
+warnings.filterwarnings("ignore", message=".*inplace.*")
 
 IST = ZoneInfo("Asia/Kolkata")
 INTERVAL_HOURS = 2
@@ -35,7 +37,7 @@ MIN_BUY_SCORE = _cfg.get("min_buy_score", MIN_BUY_SCORE); TOP_N = _cfg.get("top_
 OUT_DIR = "reports"
 DOCS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")   # dashboard reads docs/data.json
 INDEX_TICKERS = {"NIFTY 50": "^NSEI", "NIFTY BANK": "^NSEBANK", "NIFTY IT": "^CNXIT",
-                 "NIFTY NEXT 50": "^NSMIDCP", "NIFTY MIDCAP 100": "^CRSMID", "NIFTY FMCG": "^CNXFMCG",
+                 "NIFTY NEXT 50": "^NSMIDCP", "NIFTY MIDCAP 100": "NIFTY_MIDCAP_100.NS", "NIFTY FMCG": "^CNXFMCG",
                  "SENSEX": "^BSESN", "BSE 500": "BSE-500.BO", "BSE MIDCAP": "BSE-MIDCAP.BO",
                  "BSE SMALLCAP": "BSE-SMLCAP.BO"}   # any that fail are skipped; dashboard shows simulated values for them
 
