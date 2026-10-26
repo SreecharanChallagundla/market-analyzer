@@ -38,7 +38,7 @@ th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--bd);font-va
 th{color:var(--mu);font-weight:500;font-size:12px}td.r,th.r{text-align:right}tr.lk{cursor:pointer}tr.lk:hover{background:var(--bg)}
 h2{font-size:15px;margin:18px 0 10px}.note{color:var(--mu);font-size:12px;margin-top:16px}
 .cols{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
-</style></head><body>
+input[type=checkbox]{min-width:0;padding:0}.picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px;max-height:220px;overflow:auto;border:1px solid var(--bd);border-radius:8px;padding:8px}.pk{display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer}</style></head><body>
 <header><h1>Bharat Market Analyzer<small>NSE (Nifty) &amp; BSE (Sensex) trend dashboards</small></h1>
 <div class="seg" id="ex"><button data-x="NSE" class="on">NSE · Nifty</button><button data-x="BSE">BSE · Sensex</button></div></header>
 <div class="tabs" id="tabs"></div>
@@ -84,11 +84,64 @@ function chart(id,ser,n,labels){const W=700,H=280,L=52,B=8,T=8,w=W-L-6,h=H-T-B;
   tip.textContent=`${labels(i,n)} · ₹${fmt(m[i])}`};
  svg.onmouseleave=()=>{tip.style.display='none';cx.setAttribute('opacity',0)}}
 const dayLbl=(i,n)=>{const d=new Date(2026,9,26);d.setDate(d.getDate()-Math.round((n-1-i)*1.46));return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'})};
-const tabs=['Overview','Stock Analyzer','Sectors','Movers & Watchlist','Agent Signals','My Stocks'];
+const BT=['Overview','Stock Analyzer','Sectors','Movers & Watchlist','Agent Signals','My Stocks'];
+let CFG={name:'',hidden:[],tabs:[]};
+try{const c=JSON.parse(localStorage.getItem('cfg')||'null');if(c)CFG=Object.assign(CFG,c)}catch(e){}
+const saveCFG=()=>{try{localStorage.setItem('cfg',JSON.stringify(CFG))}catch(e){}};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ALLIDX=[...IDX.NSE,...IDX.BSE];
+const lookup=k=>{const s=ST.find(x=>x.s==k);if(s)return{n:s.n,a:S(s),st:s};const i=ALLIDX.find(x=>x[0]==k);return i?{n:k,a:I(i)}:null};
 function render(){
- $('#tabs').innerHTML=tabs.map(t=>`<button class="${t==st.tab?'on':''}" data-t="${t}">${t}</button>`).join('');
+ const vis=BT.filter(t=>!CFG.hidden.includes(t)),all=[...vis.map(t=>({k:t,n:t})),...CFG.tabs.map(t=>({k:'c:'+t.id,n:(t.lock&&CFG.pin?(st.unl?'🔓 ':'🔒 '):'')+t.name})),{k:'Customize',n:'⚙ Customize'}];
+ if(!all.some(t=>t.k==st.tab))st.tab=all[0].k;
+ const nm=CFG.name.trim();$('h1').firstChild.nodeValue=nm?nm+'’s Market Dashboard':'Bharat Market Analyzer';document.title=nm?nm+'’s Market Dashboard':'Bharat Market Analyzer';
+ $('#tabs').innerHTML=all.map(t=>`<button class="${t.k==st.tab?'on':''}" data-t="${esc(t.k)}">${esc(t.n)}</button>`).join('')+'<button data-a="new" title="Add your own tab">＋</button>';
  $('#ex').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.x==st.x));
- ({Overview:ov,'Stock Analyzer':an,Sectors:sec,'Movers & Watchlist':mv,'Agent Signals':ag,'My Stocks':ms})[st.tab]()}
+ const f=({Overview:ov,'Stock Analyzer':an,Sectors:sec,'Movers & Watchlist':mv,'Agent Signals':ag,'My Stocks':ms,Customize:cz})[st.tab];
+ f?f():(()=>{const t=CFG.tabs.find(t=>'c:'+t.id==st.tab);t&&t.lock&&CFG.pin&&!st.unl?lk(t):cv(t)})()}
+function cv(t){if(!t)return;const rows=t.items.map(k=>({k,...lookup(k)})).filter(r=>r.a);
+ const head=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(t.name)}</h2><span>${t.lock&&CFG.pin?'<button class="btn o" data-a="lockNow">🔒 Lock now</button> ':''}<button class="btn o" data-a="edit" data-id="${t.id}">Edit tab</button></span></div>`;
+ if(!rows.length){$('#app').innerHTML=head+'<div class="card">This tab is empty. Use Edit tab to choose stocks or indices.</div>';return}
+ const body=t.view=='table'?`<div class="card wrap"><table><tr><th>Name</th><th class="r">Price ₹</th><th class="r">1D</th><th class="r">1W</th><th class="r">1M</th><th class="r">3M</th><th class="r">RSI</th></tr>${rows.map(r=>{const a=r.a;return `<tr class="${r.st?'lk':''}" ${r.st?`data-s="${esc(r.k)}"`:''}><td>${esc(r.k)}<div class="nm">${esc(r.n)}</div></td><td class="r">${fmt(a[N-1])}</td>${[1,5,21,63].map(d=>`<td class="r ${cls(chg(a,d))}">${sg(chg(a,d))}</td>`).join('')}<td class="r">${fmt(rsi(a),0)}</td></tr>`}).join('')}</table></div>`
+ :`<div class="grid">${rows.map(r=>{const a=r.a;return `<div class="card ${r.st?'click':''}" ${r.st?`data-s="${esc(r.k)}"`:''}><div class="nm">${esc(r.k)}${r.st?' · '+esc(r.n):''}</div><div class="big">${fmt(a[N-1])}</div><div><span class="${cls(chg(a))}">${sg(chg(a))}</span> <span class="nm">1D</span> · <span class="${cls(chg(a,21))}">${sg(chg(a,21))}</span> <span class="nm">1M</span> · <span class="nm">RSI ${fmt(rsi(a),0)}</span></div>${spark(a.slice(-60))}</div>`}).join('')}</div>`;
+ $('#app').innerHTML=head+body+'<p class="note">Tap a stock to open it in the analyzer.</p>'}
+function tabForm(ed){const box=l=>l.map(([k,lab])=>`<label class="pk"><input type="checkbox" value="${esc(k)}" ${ed.items.includes(k)?'checked':''}> ${esc(lab)}</label>`).join('');
+ return `<div class="card" id="fm" style="margin-top:12px"><h2 style="margin-top:0">${ed.id?'Edit tab':'New tab'}</h2><div class="row"><input id="fn" placeholder="Tab name, e.g. My banks" value="${esc(ed.name)}"><select id="fv"><option value="cards"${ed.view=='cards'?' selected':''}>Cards view</option><option value="table"${ed.view=='table'?' selected':''}>Table view</option></select></div><label class="pk" style="margin-bottom:8px"><input type="checkbox" id="fl" ${ed.lock?'checked':''}> 🔒 Lock this tab with my PIN</label><input id="fq" placeholder="Filter the list…" style="width:100%;margin-bottom:8px"><div class="nm">Indices</div><div class="picks">${box(ALLIDX.map(i=>[i[0],i[0]]))}</div><div class="nm" style="margin-top:8px">Stocks</div><div class="picks">${box(ST.map(s=>[s.s,s.s+' · '+s.n]))}</div><div class="row" style="margin:12px 0 0"><button class="btn" data-a="savetab">Save tab</button><button class="btn o" data-a="cancel">Cancel</button></div></div>`}
+function cz(){const bk=CFG.pin&&!st.unl?'Unlock in the Privacy section above to see your backup text.':JSON.stringify({cfg:CFG,wl:st.wl,cs:ST.filter(s=>s.custom).map(s=>[s.s,s.n,s.sec,s.p])});
+ $('#app').innerHTML=`<div class="card"><h2 style="margin-top:0">Make it yours</h2><div class="row"><input id="cn" placeholder="Your name (optional)" value="${esc(CFG.name)}"><button class="btn" data-a="savename">Save name</button></div><div class="nm">Show these built-in tabs:</div><div class="row" style="margin:6px 0 0">${BT.map(t=>`<label class="pk"><input type="checkbox" data-a="vis" data-b="${esc(t)}" ${CFG.hidden.includes(t)?'':'checked'}> ${esc(t)}</label>`).join('')}</div></div>
+ ${priv()}<h2>Your tabs</h2><div class="card">${CFG.tabs.map(t=>`<div class="row" style="margin:0 0 8px;justify-content:space-between"><span><b>${esc(t.name)}</b> <span class="nm">· ${t.items.length} items · ${t.view}</span></span><span><button class="btn o" data-a="edit" data-id="${t.id}">Edit</button> <button class="btn o" data-a="deltab" data-id="${t.id}">Delete</button></span></div>`).join('')||'<div class="nm" style="margin-bottom:8px">No custom tabs yet.</div>'}<button class="btn" data-a="new">＋ New tab</button></div>
+ ${st.ed?tabForm(st.ed):''}
+ <h2>Backup or move to another device</h2><div class="card"><textarea id="bk" rows="4" style="width:100%;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:8px;font:12px monospace">${esc(bk)}</textarea><div class="row" style="margin:8px 0 0"><button class="btn o" data-a="imp">Import from box</button></div><p class="note">Copy this text to keep a backup. Paste a backup into the box and press Import to restore it on another browser or phone.</p></div>
+ <p class="note">Settings are saved in this browser only. Each person who opens the site gets their own tabs.</p>`}
+const hx=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+async function hp(pin,salt){const te=new TextEncoder(),k=await crypto.subtle.importKey('raw',te.encode(pin),'PBKDF2',false,['deriveBits']);return hx(await crypto.subtle.deriveBits({name:'PBKDF2',salt:te.encode(salt),iterations:100000,hash:'SHA-256'},k,256))}
+async function chk(pin){return !!CFG.pin&&await hp(pin,CFG.pin.s)===CFG.pin.h}
+let lt;const bump=()=>{clearTimeout(lt);if(st.unl)lt=setTimeout(()=>{st.unl=false;render()},300000)};
+function lk(t){$('#app').innerHTML=`<div class="card" style="max-width:360px;margin:30px auto;text-align:center"><div style="font-size:34px">🔒</div><h2 style="margin:6px 0 4px">${esc(t.name)} is locked</h2><p class="nm">Enter your PIN to view this tab.</p><div class="row" style="justify-content:center"><input id="pn" type="password" placeholder="PIN" autocomplete="off"><button class="btn" data-a="unlock">Unlock</button></div><div id="pe" class="dn"></div></div>`;const i=$('#pn');i&&i.focus()}
+function priv(){let b;
+ if(!CFG.pin)b=`<p class="nm" style="margin:0 0 8px">Set a PIN to lock personal tabs. A locked tab stays hidden until the PIN is entered.</p><div class="row" style="margin:0"><input id="np" type="password" placeholder="New PIN (4+ characters)" autocomplete="new-password"><button class="btn" data-a="setpin">Set PIN</button></div>`;
+ else if(!st.unl)b=`<p class="nm" style="margin:0 0 8px">🔒 Locked. Enter your PIN to edit locked tabs or see the backup.</p><div class="row" style="margin:0"><input id="pn" type="password" placeholder="PIN" autocomplete="off"><button class="btn" data-a="unlock">Unlock</button></div><div id="pe" class="dn"></div>`;
+ else b=`<p class="nm" style="margin:0 0 8px">🔓 Unlocked. It locks again after 5 minutes of inactivity, or on reload.</p><div class="row" style="margin:0"><button class="btn o" data-a="lockNow">🔒 Lock now</button><input id="np" type="password" placeholder="New PIN" autocomplete="new-password"><button class="btn o" data-a="setpin">Change PIN</button><button class="btn o" data-a="rmpin">Remove PIN</button></div>`;
+ return `<h2>Privacy</h2><div class="card">${b}<p class="note" style="margin-bottom:0">This lock lives in your browser. It keeps your tabs hidden from other people using this device or looking over a shoulder, but it is not strong security. Pick a longer PIN and do not rely on it for sensitive data.</p></div>`}
+document.addEventListener('click',async e=>{bump();const t=e.target.closest('[data-a]');if(!t)return;const a=t.dataset.a;
+ if(a=='unlock'){if(await chk($('#pn').value)){st.unl=true;bump();render()}else{$('#pe').textContent='Wrong PIN';$('#pn').value=''}}
+ else if(a=='lockNow'){st.unl=false;render()}
+ else if(a=='setpin'){const v=$('#np').value;if(v.length<4){alert('Use at least 4 characters.');return}const s=hx(crypto.getRandomValues(new Uint8Array(16)));CFG.pin={s,h:await hp(v,s)};saveCFG();st.unl=true;bump();render()}
+ else if(a=='rmpin'){if(!confirm('Remove the PIN and unlock all tabs?'))return;CFG.pin=null;CFG.tabs.forEach(x=>x.lock=false);st.unl=false;saveCFG();render()}});
+document.addEventListener('keydown',e=>{if(e.key!='Enter')return;const b=e.target.id=='pn'?'unlock':e.target.id=='np'?'setpin':null;if(b){const x=document.querySelector('[data-a='+b+']');x&&x.click()}});
+document.addEventListener('input',e=>{if(e.target.id=='fq'){const q=e.target.value.toLowerCase();document.querySelectorAll('#fm .pk').forEach(l=>l.style.display=l.textContent.toLowerCase().includes(q)?'':'none')}});
+document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(!t)return;const a=t.dataset.a,id=t.dataset.id,go=()=>setTimeout(()=>{const f=$('#fm');f&&f.scrollIntoView({behavior:'smooth'})},0);
+ if(a=='new'){st.ed={id:null,name:'',view:'cards',items:[]};st.tab='Customize';render();go()}
+ else if(a=='edit'){const x=CFG.tabs.find(y=>y.id==id);if(x&&x.lock&&CFG.pin&&!st.unl){st.tab='c:'+id;render();return}if(x){st.ed={id:x.id,name:x.name,view:x.view,items:[...x.items],lock:!!x.lock};st.tab='Customize';render();go()}}
+ else if(a=='cancel'){st.ed=null;render()}
+ else if(a=='savetab'){const nm=$('#fn').value.trim()||'My tab',v=$('#fv').value,lock=$('#fl').checked,items=[...document.querySelectorAll('#fm .pk input:checked')].map(i=>i.value);
+  if(lock&&!CFG.pin){alert('Set a PIN first: Customize → Privacy.');return}
+  if(st.ed.id){Object.assign(CFG.tabs.find(y=>y.id==st.ed.id),{name:nm,view:v,items,lock})}else{const n={id:Date.now().toString(36),name:nm,view:v,items,lock};CFG.tabs.push(n);st.tab='c:'+n.id}
+  st.ed=null;saveCFG();render()}
+ else if(a=='deltab'){const x=CFG.tabs.find(y=>y.id==id);if(x&&x.lock&&CFG.pin&&!st.unl){st.tab='c:'+id;render();return}if(confirm('Delete this tab?')){CFG.tabs=CFG.tabs.filter(y=>y.id!=id);st.tab='Customize';saveCFG();render()}}
+ else if(a=='savename'){CFG.name=$('#cn').value;saveCFG();render()}
+ else if(a=='vis'){const b=t.dataset.b;CFG.hidden=t.checked?CFG.hidden.filter(x=>x!=b):[...CFG.hidden,b];saveCFG();render()}
+ else if(a=='imp'){if(CFG.pin&&!st.unl){alert('Unlock first: Customize → Privacy.');return}try{const d=JSON.parse($('#bk').value);CFG=Object.assign({name:'',hidden:[],tabs:[]},d.cfg||{});if(d.wl)st.wl=d.wl;(d.cs||[]).forEach(([s,n,sec,p])=>{if(!ST.some(x=>x.s==s))ST.push(mkStock(s,n,sec,p))});saveCFG();saveWL();saveCustom();render()}catch(err){alert('Could not read that backup text.')}}});
 function ov(){const L=IDX[st.x];if(st.idx>=L.length)st.idx=0;
  $('#app').innerHTML=`<div class="grid">${L.map((x,i)=>{const a=I(x);return `<div class="card click ${i==st.idx?'sel':''}" data-i="${i}"><div class="nm">${x[0]}</div><div class="big">${fmt(a[N-1])}</div><div class="${cls(chg(a))}">${sg(chg(a))} <span class="nm">1D</span></div>${spark(a.slice(-60))}</div>`}).join('')}</div>
  <h2>${L[st.idx][0]} · trend</h2><div class="card"><div class="row" id="rg"></div><div class="chart" id="c1"></div><div class="stats" id="s1"></div></div>
