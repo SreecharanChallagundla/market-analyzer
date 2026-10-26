@@ -23,8 +23,17 @@ WATCHLIST = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "SBIN", "BHARTI
              "TATASTEEL", "POWERGRID", "COALINDIA", "HCLTECH", "ULTRACEMCO", "NESTLEIND"]
 CAPITAL, RISK_PCT = 100000, 1.0       # rupees; % of capital risked per trade (position sizing)
 MIN_BUY_SCORE, TOP_N = 4, 5
+
+# Settings can be overridden from config.json (edit it directly on GitHub)
+try:
+    _cfg = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")))
+except Exception:
+    _cfg = {}
+WATCHLIST = [s.strip().upper().replace(".NS", "") for s in _cfg.get("watchlist", WATCHLIST) if str(s).strip()]
+CAPITAL = _cfg.get("capital", CAPITAL); RISK_PCT = _cfg.get("risk_pct", RISK_PCT)
+MIN_BUY_SCORE = _cfg.get("min_buy_score", MIN_BUY_SCORE); TOP_N = _cfg.get("top_n", TOP_N)
 OUT_DIR = "reports"
-DOCS_DIR = os.path.dirname(os.path.abspath(__file__))
+DOCS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")   # dashboard reads docs/data.json
 INDEX_TICKERS = {"NIFTY 50": "^NSEI", "NIFTY BANK": "^NSEBANK", "NIFTY IT": "^CNXIT",
                  "NIFTY NEXT 50": "^NSMIDCP", "NIFTY MIDCAP 100": "^CRSMID", "NIFTY FMCG": "^CNXFMCG",
                  "SENSEX": "^BSESN", "BSE 500": "BSE-500.BO", "BSE MIDCAP": "BSE-MIDCAP.BO",
