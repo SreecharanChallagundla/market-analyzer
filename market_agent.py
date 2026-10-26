@@ -24,7 +24,7 @@ WATCHLIST = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "SBIN", "BHARTI
 CAPITAL, RISK_PCT = 100000, 1.0       # rupees; % of capital risked per trade (position sizing)
 MIN_BUY_SCORE, TOP_N = 4, 5
 OUT_DIR = "reports"
-DOCS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")   # dashboard reads docs/data.json
+DOCS_DIR = os.path.dirname(os.path.abspath(__file__))
 INDEX_TICKERS = {"NIFTY 50": "^NSEI", "NIFTY BANK": "^NSEBANK", "NIFTY IT": "^CNXIT",
                  "NIFTY NEXT 50": "^NSMIDCP", "NIFTY MIDCAP 100": "^CRSMID", "NIFTY FMCG": "^CNXFMCG",
                  "SENSEX": "^BSESN", "BSE 500": "BSE-500.BO", "BSE MIDCAP": "BSE-MIDCAP.BO",
