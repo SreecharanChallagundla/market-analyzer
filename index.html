@@ -156,7 +156,7 @@ function ov(){const L=IDX[st.x];if(st.idx>=L.length)st.idx=0;
 function rangeBtns(){$('#rg').innerHTML=[[21,'1M'],[63,'3M'],[126,'6M'],[250,'1Y']].map(([n,l])=>`<button class="btn ${n==st.rg?'':'o'}" data-r="${n}">${l}</button>`).join('')}
 const cr=v=>fmt(v/1e7,0);
 function side(x){const R=AG&&!AG.demo&&AG.reports&&AG.reports[x.s],el=$('#side');
- if(!R){el.innerHTML=`<div class="card"><h2 style="margin:0 0 6px">Report · ${esc(x.s)}</h2><div class="nm">${AG&&!AG.demo?'This stock is not covered by the agent. Add its symbol to the watchlist in config.json to get reports.':'Reports appear after the first agent run on GitHub.'}</div></div>`;return}
+ if(!R){el.innerHTML=`<div class="card"><h2 style="margin:0 0 6px">Report · ${esc(x.s)}</h2><div class="nm">${!AG||AG.demo?'Reports appear after the first agent run on GitHub.':!AG.reports?'The agent data has no reports yet. Update market_agent.py on GitHub to the latest version, then run the workflow again.':'This stock is not covered by the agent. Add its symbol to the watchlist in config.json to get reports.'}</div></div>`;return}
  const g=R.signal||{},f=R.fund||{},nw=(R.news||[]).filter(n=>/^https?:\/\//.test(n.u)),up=f.target&&g.price?(f.target/g.price-1)*100:null;
  const fr=[['Market cap',f.mcap?'₹'+cr(f.mcap)+' Cr':null],['P/E (TTM)',f.pe?fmt(f.pe,1):null],['Forward P/E',f.fpe?fmt(f.fpe,1):null],['P/B',f.pb?fmt(f.pb,1):null],['EPS (TTM)',f.eps!=null?'₹'+fmt(f.eps):null],['ROE',f.roe!=null?fmt(f.roe*100,1)+'%':null],['Profit margin',f.margin!=null?fmt(f.margin*100,1)+'%':null],['Debt/Equity',f.de!=null?fmt(f.de,0):null]].filter(r=>r[1]);
  el.innerHTML=`<div class="card"><h2 style="margin:0 0 8px">Report · ${esc(x.s)}</h2>
