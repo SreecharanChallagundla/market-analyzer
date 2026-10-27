@@ -38,12 +38,13 @@ th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--bd);font-va
 th{color:var(--mu);font-weight:500;font-size:12px}td.r,th.r{text-align:right}tr.lk{cursor:pointer}tr.lk:hover{background:var(--bg)}
 h2{font-size:15px;margin:18px 0 10px}.note{color:var(--mu);font-size:12px;margin-top:16px}
 .cols{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
-input[type=checkbox]{min-width:0;padding:0}.picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px;max-height:220px;overflow:auto;border:1px solid var(--bd);border-radius:8px;padding:8px}.pk{display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer}</style></head><body>
+input[type=checkbox]{min-width:0;padding:0}.picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px;max-height:220px;overflow:auto;border:1px solid var(--bd);border-radius:8px;padding:8px}.pk{display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer}.split{display:grid;gap:14px;grid-template-columns:minmax(0,1fr) 330px;align-items:start}aside{position:sticky;top:10px}.nw a{color:var(--ac);text-decoration:none}.nw>div{padding:7px 0;border-bottom:1px solid var(--bd)}@media(max-width:900px){.split{grid-template-columns:1fr}aside{position:static}}</style></head><body>
 <header><h1>Bharat Market Analyzer<small>NSE (Nifty) &amp; BSE (Sensex) trend dashboards</small></h1>
 <div class="seg" id="ex"><button data-x="NSE" class="on">NSE · Nifty</button><button data-x="BSE">BSE · Sensex</button></div></header>
 <div class="tabs" id="tabs"></div>
 <div id="bn" class="note" style="padding:8px 18px;margin:0"></div>
 <main id="app"></main>
+<div id="hits" class="note" style="text-align:center;margin:0 0 20px"></div>
 <script>
 const $=s=>document.querySelector(s);
 const fmt=(n,d=2)=>n.toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -112,7 +113,7 @@ function cz(){const bk=CFG.pin&&!st.unl?'Unlock in the Privacy section above to 
  ${priv()}<h2>Your tabs</h2><div class="card">${CFG.tabs.map(t=>`<div class="row" style="margin:0 0 8px;justify-content:space-between"><span><b>${esc(t.name)}</b> <span class="nm">· ${t.items.length} items · ${t.view}</span></span><span><button class="btn o" data-a="edit" data-id="${t.id}">Edit</button> <button class="btn o" data-a="deltab" data-id="${t.id}">Delete</button></span></div>`).join('')||'<div class="nm" style="margin-bottom:8px">No custom tabs yet.</div>'}<button class="btn" data-a="new">＋ New tab</button></div>
  ${st.ed?tabForm(st.ed):''}
  <h2>Backup or move to another device</h2><div class="card"><textarea id="bk" rows="4" style="width:100%;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:8px;font:12px monospace">${esc(bk)}</textarea><div class="row" style="margin:8px 0 0"><button class="btn o" data-a="imp">Import from box</button></div><p class="note">Copy this text to keep a backup. Paste a backup into the box and press Import to restore it on another browser or phone.</p></div>
- <p class="note">Settings are saved in this browser only. Each person who opens the site gets their own tabs.</p>`}
+ ${sync()}<p class="note">Settings are saved in this browser only. Each person who opens the site gets their own tabs.</p>`}
 const hx=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
 async function hp(pin,salt){const te=new TextEncoder(),k=await crypto.subtle.importKey('raw',te.encode(pin),'PBKDF2',false,['deriveBits']);return hx(await crypto.subtle.deriveBits({name:'PBKDF2',salt:te.encode(salt),iterations:100000,hash:'SHA-256'},k,256))}
 async function chk(pin){return !!CFG.pin&&await hp(pin,CFG.pin.s)===CFG.pin.h}
@@ -153,9 +154,20 @@ function ov(){const L=IDX[st.x];if(st.idx>=L.length)st.idx=0;
  $('#s1').innerHTML=[['Period return',sg((r[r.length-1]/r[0]-1)*100)],['52W high',fmt(hi)],['52W low',fmt(lo)],['RSI (14)',fmt(rsi(a),1)],['vs 50-DMA',sg((a[N-1]/sma(a,50)[N-1]-1)*100)],['vs 200-DMA',sg((a[N-1]/sma(a,200)[N-1]-1)*100)]].map(([k,v])=>`<div><span class="nm">${k}</span><b>${v}</b></div>`).join('');
  const up=ST.filter(s=>chg(S(s))>=0).length;$('#br').innerHTML=`<div style="display:flex;height:14px;border-radius:7px;overflow:hidden"><div style="width:${up/ST.length*100}%;background:var(--up)"></div><div style="flex:1;background:var(--dn)"></div></div><div class="row" style="margin:8px 0 0"><span class="up">${up} advancing</span><span class="dn">${ST.length-up} declining</span></div>`}
 function rangeBtns(){$('#rg').innerHTML=[[21,'1M'],[63,'3M'],[126,'6M'],[250,'1Y']].map(([n,l])=>`<button class="btn ${n==st.rg?'':'o'}" data-r="${n}">${l}</button>`).join('')}
+const cr=v=>fmt(v/1e7,0);
+function side(x){const R=AG&&!AG.demo&&AG.reports&&AG.reports[x.s],el=$('#side');
+ if(!R){el.innerHTML=`<div class="card"><h2 style="margin:0 0 6px">Report · ${esc(x.s)}</h2><div class="nm">${AG&&!AG.demo?'This stock is not covered by the agent. Add its symbol to the watchlist in config.json to get reports.':'Reports appear after the first agent run on GitHub.'}</div></div>`;return}
+ const g=R.signal||{},f=R.fund||{},nw=(R.news||[]).filter(n=>/^https?:\/\//.test(n.u)),up=f.target&&g.price?(f.target/g.price-1)*100:null;
+ const fr=[['Market cap',f.mcap?'₹'+cr(f.mcap)+' Cr':null],['P/E (TTM)',f.pe?fmt(f.pe,1):null],['Forward P/E',f.fpe?fmt(f.fpe,1):null],['P/B',f.pb?fmt(f.pb,1):null],['EPS (TTM)',f.eps!=null?'₹'+fmt(f.eps):null],['ROE',f.roe!=null?fmt(f.roe*100,1)+'%':null],['Profit margin',f.margin!=null?fmt(f.margin*100,1)+'%':null],['Debt/Equity',f.de!=null?fmt(f.de,0):null]].filter(r=>r[1]);
+ el.innerHTML=`<div class="card"><h2 style="margin:0 0 8px">Report · ${esc(x.s)}</h2>
+ ${g.score!=null?`<div class="row" style="margin:0 0 6px"><span class="badge ${g.score>=4?'up':g.score<=-2?'dn':'n'}">Signal score ${g.score}</span></div><div class="nm">Entry ~₹${fmt(g.price)} · Stop ₹${fmt(g.stop)} · Target ₹${fmt(g.target)}</div><div class="nm" style="margin-top:4px">${esc(g.why||'')}</div><div class="nm" style="margin-top:4px">Sell: ${esc(g.trail||'')}</div>`:''}
+ ${f.rec||f.target?`<h2 style="margin:14px 0 6px">Analyst view</h2><div class="nm">${f.rec?'Consensus: <b>'+esc(String(f.rec).replace(/_/g,' '))+'</b>':''}${f.n?' ('+f.n+' analysts)':''}${f.target?'<br>Mean target ₹'+fmt(f.target)+(up!=null?' ('+sg(up)+' vs entry)':''):''}</div>`:''}
+ ${fr.length?`<h2 style="margin:14px 0 6px">Fundamentals</h2><div class="stats" style="margin:0;grid-template-columns:1fr 1fr">${fr.map(([k,v])=>`<div><span class="nm">${k}</span><b style="font-size:14px">${v}</b></div>`).join('')}</div>`:''}
+ <h2 style="margin:14px 0 6px">Latest news</h2><div class="nw">${nw.length?nw.map(n=>`<div><a href="${esc(n.u)}" target="_blank" rel="noopener noreferrer">${esc(n.t)}</a><div class="nm">${esc(n.p)}${n.d?' · '+esc(n.d):''}</div></div>`).join(''):'<div class="nm">No headlines available.</div>'}</div>
+ <p class="note" style="margin-bottom:0">Updated ${new Date(AG.updated).toLocaleString('en-IN')}. Fundamentals and news come from Yahoo Finance via the agent and can be missing or delayed.</p></div>`}
 function an(){const o=ST.map(s=>`<option value="${s.s}"${s.s==st.sym?' selected':''}>${s.s} – ${s.n}</option>`).join('');
- $('#app').innerHTML=`<div class="row"><select id="q">${o}</select><button class="btn" id="go">Analyze</button><button class="btn o" id="wl">☆ Watchlist</button></div><div id="out"></div>`;draw()}
-function draw(){const x=ST.find(s=>s.s==st.sym.toUpperCase());if(!x){$('#out').innerHTML='<div class="card">Symbol not found. Pick one from the suggestions.</div>';return}
+ $('#app').innerHTML=`<div class="row"><select id="q">${o}</select><button class="btn" id="go">Analyze</button><button class="btn o" id="wl">☆ Watchlist</button></div><div class="split"><div id="out"></div><aside id="side"></aside></div>`;draw()}
+function draw(){const x=ST.find(s=>s.s==st.sym.toUpperCase());if(!x){$('#out').innerHTML='<div class="card">Symbol not found. Pick one from the suggestions.</div>';$('#side').innerHTML='';return}
  st.sym=x.s;const a=S(x),s20=sma(a,20),s50=sma(a,50),R=rsi(a),m20=chg(a,20),hi=Math.max(...a),lo=Math.min(...a),p=a[N-1];
  let sc=0;const why=[];
  if(p>s20[N-1]){sc++;why.push('Price above 20-DMA')}else why.push('Price below 20-DMA');
@@ -169,7 +181,7 @@ function draw(){const x=ST.find(s=>s.s==st.sym.toUpperCase());if(!x){$('#out').i
  <div class="stats">${[['1W',sg(chg(a,5))],['1M',sg(chg(a,21))],['6M',sg(chg(a,125))],['1Y',sg(chg(a,249))],['RSI (14)',fmt(R,1)],['52W range pos.',fmt(pos,0)+'%'],['52W high','₹'+fmt(hi)],['52W low','₹'+fmt(lo)]].map(([k,t])=>`<div><span class="nm">${k}</span><b>${t}</b></div>`).join('')}</div>
  <h2>Why this signal</h2><ul style="margin:0;padding-left:18px">${why.map(w=>`<li>${w}</li>`).join('')}</ul></div><p class="note">Rule-based signal for illustration only — not investment advice.</p>`;
  rangeBtns();chart('#c2',[{d:a,c:'var(--ac)'},{d:s20,c:'#e59f0a',w:1.2,da:1},{d:s50,c:'#9b59b6',w:1.2,da:1}],st.rg,dayLbl);
- $('#wl').textContent=st.wl.includes(x.s)?'★ In watchlist':'☆ Watchlist'}
+ $('#wl').textContent=st.wl.includes(x.s)?'★ In watchlist':'☆ Watchlist';side(x)}
 function sec(){const m={};ST.forEach(s=>{(m[s.sec]=m[s.sec]||[]).push(s)});
  const rows=Object.entries(m).map(([k,v])=>[k,v.reduce((p,s)=>p+chg(S(s)),0)/v.length,v]).sort((a,b)=>b[1]-a[1]);
  $('#app').innerHTML=`<h2 style="margin-top:0">Sector heatmap · 1D average change</h2><div class="heat">${rows.map(([k,c,v])=>`<div style="background:color-mix(in srgb,var(${c>=0?'--up':'--dn'}) ${Math.min(55,Math.abs(c)*28+8)}%,var(--card));border:1px solid var(--bd)" data-sec="${k}"><span class="nm" style="color:inherit;opacity:.8">${k} · ${v.length}</span><b>${sg(c)}</b></div>`).join('')}</div><div id="sd"></div>
@@ -208,5 +220,27 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-t],[data-x
  else if(t.id=='wl'){const i=st.wl.indexOf(st.sym);i<0?st.wl.push(st.sym):st.wl.splice(i,1);saveWL();$('#wl').textContent=i<0?'★ In watchlist':'☆ Watchlist'}});
 document.addEventListener('change',e=>{if(e.target.id=='q'){st.sym=e.target.value;draw()}});
 document.addEventListener('keydown',e=>{if(e.key=='Enter'&&e.target.id=='q')$('#go').click()});
+const bkObj=()=>({cfg:CFG,wl:st.wl,cs:ST.filter(s=>s.custom).map(s=>[s.s,s.n,s.sec,s.p])});
+function applyBk(d){CFG=Object.assign({name:'',hidden:[],tabs:[]},d.cfg||{});if(d.wl)st.wl=d.wl;(d.cs||[]).forEach(([s,n,sec,p])=>{if(!ST.some(x=>x.s==s))ST.push(mkStock(s,n,sec,p))});saveCFG();saveWL();saveCustom();st.unl=false}
+const gs=()=>{try{return JSON.parse(localStorage.getItem('gsync')||'{}')}catch(e){return{}}};
+const sgs=o=>{try{localStorage.setItem('gsync',JSON.stringify(o))}catch(e){}};
+const gh=(u,m,b)=>fetch('https://api.github.com'+u,{method:m||'GET',headers:{Authorization:'Bearer '+gs().token,Accept:'application/vnd.github+json'},body:b?JSON.stringify(b):undefined}).then(r=>{if(!r.ok)throw new Error('GitHub replied '+r.status);return r.json()});
+function sync(){const g=gs();return `<h2>Keep your tabs across browsers</h2><div class="card"><p class="nm" style="margin:0 0 8px"><b>File backup (safest).</b> Download a file now, then upload it in any new browser.</p><div class="row" style="margin:0 0 14px"><button class="btn o" data-a="dl">⬇ Download backup file</button><input type="file" id="bf" accept=".json,application/json"></div><p class="nm" style="margin:0 0 8px"><b>Cloud sync (optional).</b> Saves your settings to a private GitHub Gist in your own account, so any browser can load them. Create a token at github.com/settings/tokens that can read and write gists (a classic token with only the “gist” scope is simplest), paste it here, then press Save or Load.</p><div class="row" style="margin:0"><input id="tk" type="password" placeholder="GitHub token" value="${esc(g.token||'')}" autocomplete="off"><button class="btn" data-a="cs">Save to cloud</button><button class="btn o" data-a="cl">Load from cloud</button></div><div id="sm" class="note" style="margin-bottom:0">${g.gist?'Linked to a gist from this device.':''}</div><p class="note" style="margin-bottom:0">A secret gist is unlisted, not encrypted: anyone with its link can read it, and locked-tab contents are included as plain text. The token is stored in this browser, so only use it on devices you trust and delete it on GitHub if lost.</p></div>`}
+document.addEventListener('click',async e=>{const t=e.target.closest('[data-a]');if(!t)return;const a=t.dataset.a;if(!['dl','cs','cl'].includes(a))return;
+ if(CFG.pin&&!st.unl){alert('Unlock first: Customize → Privacy.');return}
+ const sm=$('#sm');
+ if(a=='dl'){const u=URL.createObjectURL(new Blob([JSON.stringify(bkObj(),null,1)],{type:'application/json'})),x=document.createElement('a');x.href=u;x.download='market-dashboard-backup.json';x.click();setTimeout(()=>URL.revokeObjectURL(u),1000);return}
+ const tok=$('#tk').value.trim();if(!tok){sm.textContent='Paste a token first.';return}sgs({...gs(),token:tok});sm.textContent='Working…';
+ try{let id=gs().gist;
+  if(a=='cs'){const files={'dashboard.json':{content:JSON.stringify(bkObj())}};
+   if(id){await gh('/gists/'+id,'PATCH',{files})}else{const r=await gh('/gists','POST',{description:'market-dashboard-settings',public:false,files});id=r.id;sgs({...gs(),gist:id})}
+   sm.textContent='Saved to cloud at '+new Date().toLocaleTimeString('en-IN')}
+  else{if(!id){const l=await gh('/gists?per_page=100'),f=l.find(x=>x.description=='market-dashboard-settings');if(!f)throw new Error('no saved settings found in your gists');id=f.id;sgs({...gs(),gist:id})}
+   const r=await gh('/gists/'+id),c=r.files['dashboard.json'];applyBk(JSON.parse(c.truncated?await (await fetch(c.raw_url)).text():c.content));render();setTimeout(()=>{const m=$('#sm');m&&(m.textContent='Loaded from cloud.')},0)}
+ }catch(err){sm.textContent='Failed: '+err.message}});
+document.addEventListener('change',e=>{if(e.target.id!='bf')return;const f=e.target.files[0];if(!f)return;if(CFG.pin&&!st.unl){alert('Unlock first: Customize → Privacy.');e.target.value='';return}const r=new FileReader();r.onload=()=>{try{applyBk(JSON.parse(r.result));render();alert('Backup restored.')}catch(err){alert('That file could not be read.')}};r.readAsText(f)});
+const GC='';   // your GoatCounter code (the part before .goatcounter.com); leave empty to turn the counter off
+if(GC){const s=document.createElement('script');s.async=true;s.src='https://gc.zgo.at/count.js';s.dataset.goatcounter='https://'+GC+'.goatcounter.com/count';document.head.appendChild(s);
+ fetch('https://'+GC+'.goatcounter.com/counter/TOTAL.json').then(r=>r.json()).then(d=>{$('#hits').textContent='👁 '+d.count+' total page views'}).catch(()=>{})}
 fetch('data.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{if(d&&d.stocks){Object.assign(REAL,d.stocks,d.indices||{});AG=d}}).catch(()=>{}).then(()=>{banner();render()});
 </script></body></html>
