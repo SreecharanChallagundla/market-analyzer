@@ -2,14 +2,14 @@ name: market-agent
 
 on:
   schedule:
-    - cron: "0 4,6,8,10 * * 1-5"   # 09:30, 11:30, 13:30, 15:30 IST, Mon-Fri
+    - cron: "0 4,6,8,10 * * 1-5"   # 09:30, 11:30, 13:30, 15:30 IST, Mon-Fri (signals, reports, PCR)
   workflow_dispatch: {}
 
 permissions:
   contents: write
 
 concurrency:
-  group: market-agent
+  group: market-agent            # one run at a time across both workflows
   cancel-in-progress: false
 
 jobs:
@@ -29,13 +29,13 @@ jobs:
 
       - name: Run agent
         env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}       # optional
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}   # optional
         run: python market_agent.py --once
 
       - name: Publish data for the dashboard
         run: |
           git config user.name "market-agent"
           git config user.email "actions@users.noreply.github.com"
-          git add data.json
+          for f in data.json live.json pcr.json docs/data.json docs/live.json docs/pcr.json; do [ -f "$f" ] && git add "$f"; done; true
           git diff --cached --quiet || (git commit -m "Update market data" && git pull --rebase --autostash && git push)
