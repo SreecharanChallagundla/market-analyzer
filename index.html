@@ -46,6 +46,7 @@ input[type=checkbox]{min-width:0;padding:0}.picks{display:grid;grid-template-col
 <div id="bn" class="note" style="padding:8px 18px;margin:0"></div>
 <main id="app"></main>
 <div id="hits" class="note" style="text-align:center;margin:0 0 20px"></div>
+<footer style="text-align:center;color:var(--mu);font-size:13px;padding:14px 18px 22px;border-top:1px solid var(--bd)">© <span id="yr">2026</span> <b style="color:var(--tx)">iRIMS Technologies</b>. All rights reserved.</footer>
 <script>
 const $=s=>document.querySelector(s);
 const fmt=(n,d=2)=>n.toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -271,6 +272,7 @@ const plab=v=>v<0.7?'Call-heavy · cautious':v>1.2?'Put-heavy · supportive':'Ne
 function pc(){const ks=PC?Object.keys(PC).filter(k=>PC[k].length):[];
  if(!ks.length){$('#app').innerHTML='<div class="card">No PCR data yet. The agent records it once per run, and NSE sometimes blocks cloud servers, so it may stay empty. Look for “PCR” lines in the Actions log.</div>';return}
  $('#app').innerHTML=`<div class="cols">${ks.map(k=>{const hh=PC[k],e=hh[hh.length-1],pv=hh[hh.length-2];return `<div class="card"><div class="nm">${esc(k)} · Put-Call Ratio (open interest)</div><div class="big">${fmt(e.all)}</div><div>${plab(e.all)}${pv?` · <span class="${cls(e.all-pv.all)}">${e.all-pv.all>=0?'▲':'▼'} ${fmt(Math.abs(e.all-pv.all))}</span> vs ${esc(pv.d)}`:''}</div><div class="nm">Nearest expiry ${e.exp?esc(e.exp):''}: <b>${fmt(e.near)}</b></div>${hh.length>1?spark(hh.map(x=>x.all),300,60):''}<div class="wrap"><table><tr><th>Date</th><th class="r">PCR</th><th class="r">Near expiry</th></tr>${hh.slice(-10).reverse().map(x=>`<tr><td>${esc(x.d)}</td><td class="r">${fmt(x.all)}</td><td class="r">${fmt(x.near)}</td></tr>`).join('')}</table></div></div>`}).join('')}</div><p class="note">PCR = total put open interest ÷ total call open interest. One value is stored per trading day (the latest run of the day). It is context, not a signal: conventions differ and the same reading can be interpreted either way.</p>`}
+document.getElementById('yr').textContent=new Date().getFullYear();
 const GC='';   // your GoatCounter code (the part before .goatcounter.com); leave empty to turn the counter off
 if(GC){const s=document.createElement('script');s.async=true;s.src='https://gc.zgo.at/count.js';s.dataset.goatcounter='https://'+GC+'.goatcounter.com/count';document.head.appendChild(s);
  fetch('https://'+GC+'.goatcounter.com/counter/TOTAL.json').then(r=>r.json()).then(d=>{$('#hits').textContent='👁 '+d.count+' total page views'}).catch(()=>{})}
