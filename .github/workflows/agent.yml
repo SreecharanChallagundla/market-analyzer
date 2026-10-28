@@ -37,5 +37,5 @@ jobs:
         run: |
           git config user.name "market-agent"
           git config user.email "actions@users.noreply.github.com"
-          for f in data.json live.json pcr.json history.json docs/data.json docs/live.json docs/pcr.json docs/history.json; do [ -f "$f" ] && git add "$f"; done; true
+          for f in data.json live.json pcr.json history.json data.json live.json docs/pcr.json history.json; do [ -f "$f" ] && git add "$f"; done; true
           git diff --cached --quiet || (git commit -m "Update market data" && git pull --rebase --autostash && git push)
