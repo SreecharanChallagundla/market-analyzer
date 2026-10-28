@@ -1,0 +1,41 @@
+name: market-live
+
+on:
+  schedule:
+    - cron: "*/15 4-10 * * 1-5"   # every 15 min, about 09:30-16:15 IST, Mon-Fri (intraday bars)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: market-agent            # one run at a time across both workflows
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fetch live bars
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}       # optional
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}   # optional
+        run: python market_agent.py --live
+
+      - name: Publish data for the dashboard
+        run: |
+          git config user.name "market-agent"
+          git config user.email "actions@users.noreply.github.com"
+          for f in data.json live.json pcr.json docs/data.json docs/live.json docs/pcr.json; do [ -f "$f" ] && git add "$f"; done; true
+          git diff --cached --quiet || (git commit -m "Update market data" && git pull --rebase --autostash && git push)
