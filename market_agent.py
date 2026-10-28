@@ -35,7 +35,7 @@ WATCHLIST = [s.strip().upper().replace(".NS", "") for s in _cfg.get("watchlist",
 CAPITAL = _cfg.get("capital", CAPITAL); RISK_PCT = _cfg.get("risk_pct", RISK_PCT)
 MIN_BUY_SCORE = _cfg.get("min_buy_score", MIN_BUY_SCORE); TOP_N = _cfg.get("top_n", TOP_N)
 OUT_DIR = "reports"
-DOCS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")   # dashboard reads docs/data.json
+DOCS_DIR = os.path.dirname(os.path.abspath(__file__))   # data files go in the repo root, next to index.html
 INDEX_TICKERS = {"NIFTY 50": "^NSEI", "NIFTY BANK": "^NSEBANK", "NIFTY IT": "^CNXIT",
                  "NIFTY NEXT 50": "^NSMIDCP", "NIFTY MIDCAP 100": "NIFTY_MIDCAP_100.NS", "NIFTY FMCG": "^CNXFMCG",
                  "SENSEX": "^BSESN", "BSE 500": "BSE-500.BO", "BSE MIDCAP": "BSE-MIDCAP.BO",
