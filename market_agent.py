@@ -49,7 +49,7 @@ def load(symbols, demo=False):
             r = np.random.default_rng(abs(hash(s)) % 2**32)
             c = 1000 * np.exp(np.cumsum(r.normal(0.0004, 0.014, 300)))
             out[s] = pd.DataFrame({"Open": np.r_[c[0], c[:-1]], "Close": c, "High": c * 1.01, "Low": c * 0.99,
-                                   "Volume": r.integers(1e6, 5e6, 300)})
+                                   "Volume": r.integers(1e6, 5e6, 300)}, index=pd.bdate_range(end=dt.date.today(), periods=300))
         return out
     import yfinance as yf
     tick = [s + ".NS" for s in symbols]
@@ -100,7 +100,7 @@ def load_indices():
         try:
             hdf = yf.Ticker(t).history(period="1y", interval="1d").dropna(subset=["Close"]); c = hdf["Close"]
             if len(c) > 60:
-                out[name] = [round(float(x), 2) for x in c.tail(250)]; IDX_OHLC[name] = _ohlc(hdf, 120)
+                out[name] = [round(float(x), 2) for x in c.tail(250)]; IDX_OHLC[name] = _ohlc(hdf, 120); IDX_HIST[name] = _hist(hdf)
         except Exception:
             pass
     return out
@@ -155,9 +155,21 @@ def export_json(data, buys, avoid, demo, rows=None):
            "buys": [{"s": s, **clean(r)} for s, r in buys], "avoid": [{"s": s, **clean(r)} for s, r in avoid]}
     os.makedirs(DOCS_DIR, exist_ok=True)
     with open(os.path.join(DOCS_DIR, "data.json"), "w") as f: json.dump(out, f, separators=(",", ":"), default=str)
+    hist = {"updated": out["updated"], "demo": demo, "stocks": {**{s: _hist(df) for s, df in data.items()}, **IDX_HIST}}
+    with open(os.path.join(DOCS_DIR, "history.json"), "w") as f:
+        json.dump(hist, f, separators=(",", ":"))
 
 # ---------- OHLC, live (intraday) and PCR ----------
 IDX_OHLC = {}
+IDX_HIST = {}
+
+def _hist(df, n=250):
+    """Columnar daily history with dates, for the dashboard's price-history table."""
+    d = df.tail(n).ffill().bfill()
+    col = lambda c: [round(float(x), 2) for x in d[c]]
+    return {"d": [i.strftime("%Y-%m-%d") for i in d.index], "o": col("Open"), "h": col("High"),
+            "l": col("Low"), "c": col("Close"),
+            "v": [int(x) for x in d["Volume"].fillna(0)] if "Volume" in d else []}
 
 def _ohlc(df, n):
     return [[round(float(r.Open), 2), round(float(r.High), 2), round(float(r.Low), 2), round(float(r.Close), 2)]
