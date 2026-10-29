@@ -17,7 +17,17 @@ import numpy as np, pandas as pd, warnings
 warnings.filterwarnings("ignore", module="yfinance")      # hide harmless pandas deprecation noise from yfinance
 warnings.filterwarnings("ignore", message=".*inplace.*")
 
-IST = ZoneInfo("Asia/Kolkata")
+def _arg_market():
+    a = sys.argv
+    if "--market" in a and a.index("--market") + 1 < len(a): return a[a.index("--market") + 1].upper()
+    return os.getenv("MARKET", "IN").upper()
+MARKET = "US" if _arg_market() == "US" else "IN"      # python market_agent.py --market US
+US = MARKET == "US"
+IST = ZoneInfo("America/New_York" if US else "Asia/Kolkata")     # local market time zone (name kept for the code below)
+TZN, SUF, CUR = ("ET", "", "$") if US else ("IST", ".NS", "Rs ")
+FN = lambda n: ("us_" if US else "") + n               # US data files are prefixed us_
+WATCHLIST_US = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "AVGO", "JPM", "V", "MA", "UNH", "LLY", "XOM", "CVX",
+                "JNJ", "PG", "HD", "COST", "WMT", "KO", "PEP", "NFLX", "ADBE", "CRM", "AMD", "ORCL", "BAC", "DIS", "CAT"]
 INTERVAL_HOURS = 2
 WATCHLIST = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "SBIN", "BHARTIARTL",
              "ITC", "LT", "HINDUNILVR", "SUNPHARMA", "MARUTI", "M&M", "AXISBANK", "WIPRO",
@@ -31,8 +41,8 @@ try:
     _cfg = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")))
 except Exception:
     _cfg = {}
-WATCHLIST = [s.strip().upper().replace(".NS", "") for s in _cfg.get("watchlist", WATCHLIST) if str(s).strip()]
-CAPITAL = _cfg.get("capital", CAPITAL); RISK_PCT = _cfg.get("risk_pct", RISK_PCT)
+WATCHLIST = [s.strip().upper().replace(".NS", "") for s in _cfg.get("watchlist_us" if US else "watchlist", WATCHLIST_US if US else WATCHLIST) if str(s).strip()]
+CAPITAL = _cfg.get("capital_us", 10000) if US else _cfg.get("capital", CAPITAL); RISK_PCT = _cfg.get("risk_pct", RISK_PCT)
 MIN_BUY_SCORE = _cfg.get("min_buy_score", MIN_BUY_SCORE); TOP_N = _cfg.get("top_n", TOP_N)
 OUT_DIR = "reports"
 DOCS_DIR = os.path.dirname(os.path.abspath(__file__))   # data files go in the repo root, next to index.html
@@ -40,6 +50,7 @@ INDEX_TICKERS = {"NIFTY 50": "^NSEI", "NIFTY BANK": "^NSEBANK", "NIFTY IT": "^CN
                  "NIFTY NEXT 50": "^NSMIDCP", "NIFTY MIDCAP 100": "NIFTY_MIDCAP_100.NS", "NIFTY FMCG": "^CNXFMCG",
                  "SENSEX": "^BSESN", "BSE 500": "BSE-500.BO", "BSE MIDCAP": "BSE-MIDCAP.BO",
                  "BSE SMALLCAP": "BSE-SMLCAP.BO"}   # any that fail are skipped; dashboard shows simulated values for them
+if US: INDEX_TICKERS = {"S&P 500": "^GSPC", "NASDAQ": "^IXIC", "DOW JONES": "^DJI", "NASDAQ 100": "^NDX", "RUSSELL 2000": "^RUT", "VIX": "^VIX"}
 
 # ---------- data ----------
 def load(symbols, demo=False):
@@ -52,7 +63,7 @@ def load(symbols, demo=False):
                                    "Volume": r.integers(1e6, 5e6, 300)}, index=pd.bdate_range(end=dt.date.today(), periods=300))
         return out
     import yfinance as yf
-    tick = [s + ".NS" for s in symbols]
+    tick = [s + SUF for s in symbols]
     raw = yf.download(tick, period="1y", interval="1d", group_by="ticker",
                       auto_adjust=True, progress=False, threads=True)
     out = {}
@@ -133,7 +144,7 @@ def build_reports(rows, demo):
         if not demo and time.time() - t0 < 300:            # time budget so the job never hangs
             try:
                 import yfinance as yf
-                t = yf.Ticker(s + ".NS")
+                t = yf.Ticker(s + SUF)
                 try:
                     info = t.info or {}
                     rep["fund"] = {k: info[v] for k, v in FUND.items() if info.get(v) is not None}
@@ -154,9 +165,9 @@ def export_json(data, buys, avoid, demo, rows=None):
            "reports": build_reports(rows or {}, demo),
            "buys": [{"s": s, **clean(r)} for s, r in buys], "avoid": [{"s": s, **clean(r)} for s, r in avoid]}
     os.makedirs(DOCS_DIR, exist_ok=True)
-    with open(os.path.join(DOCS_DIR, "data.json"), "w") as f: json.dump(out, f, separators=(",", ":"), default=str)
+    with open(os.path.join(DOCS_DIR, FN("data.json")), "w") as f: json.dump(out, f, separators=(",", ":"), default=str)
     hist = {"updated": out["updated"], "demo": demo, "stocks": {**{s: _hist(df) for s, df in data.items()}, **IDX_HIST}}
-    with open(os.path.join(DOCS_DIR, "history.json"), "w") as f:
+    with open(os.path.join(DOCS_DIR, FN("history.json")), "w") as f:
         json.dump(hist, f, separators=(",", ":"))
 
 # ---------- OHLC, live (intraday) ----------
@@ -178,7 +189,7 @@ def _ohlc(df, n):
 def run_live():
     """Fast job: 15-minute bars for the last 2 days + quotes, written to docs/live.json."""
     import yfinance as yf
-    tick = {**{s: s + ".NS" for s in WATCHLIST}, **INDEX_TICKERS}
+    tick = {**{s: s + SUF for s in WATCHLIST}, **INDEX_TICKERS}
     raw = yf.download(list(tick.values()), period="2d", interval="15m", group_by="ticker",
                       auto_adjust=True, progress=False, threads=True)
     now = dt.datetime.now(IST); intr, quotes = {}, {}
@@ -195,7 +206,7 @@ def run_live():
         except Exception:
             pass
     os.makedirs(DOCS_DIR, exist_ok=True)
-    with open(os.path.join(DOCS_DIR, "live.json"), "w") as f:
+    with open(os.path.join(DOCS_DIR, FN("live.json")), "w") as f:
         json.dump({"updated": now.isoformat(timespec="minutes"), "open": market_open(now),
                    "intraday": intr, "quotes": quotes}, f, separators=(",", ":"))
     print(f"live.json written: {len(intr)} symbols")
@@ -206,13 +217,60 @@ FUNDS = _cfg.get("funds", FUNDS)          # names (matched against AMFI scheme n
 METALS = {"GOLD_USD": ("Gold", "GC=F", "USD / oz"), "SILVER_USD": ("Silver", "SI=F", "USD / oz"),
           "GOLDBEES": ("Gold ETF (GOLDBEES)", "GOLDBEES.NS", "Rs / unit"),
           "SILVERBEES": ("Silver ETF (SILVERBEES)", "SILVERBEES.NS", "Rs / unit")}
+if US: METALS = {"GOLD_USD": ("Gold", "GC=F", "USD / oz"), "SILVER_USD": ("Silver", "SI=F", "USD / oz"),
+                 "GLD": ("Gold ETF (GLD)", "GLD", "$ / share"), "SLV": ("Silver ETF (SLV)", "SLV", "$ / share")}
 
 FX = {"USD": ("US Dollar", 1), "EUR": ("Euro", 1), "GBP": ("British Pound", 1), "JPY": ("Japanese Yen", 100),
       "AED": ("UAE Dirham", 1), "SGD": ("Singapore Dollar", 1), "AUD": ("Australian Dollar", 1),
       "CAD": ("Canadian Dollar", 1), "CHF": ("Swiss Franc", 1), "CNY": ("Chinese Yuan", 1), "SAR": ("Saudi Riyal", 1)}
 CURRENCIES = _cfg.get("currencies", list(FX))       # 3-letter codes; each is fetched as <CODE>INR=X
 
+FX_US = {"EUR": ("EURUSD=X", "Euro", "$ per 1 EUR"), "GBP": ("GBPUSD=X", "British Pound", "$ per 1 GBP"),
+         "AUD": ("AUDUSD=X", "Australian Dollar", "$ per 1 AUD"), "JPY": ("USDJPY=X", "Japanese Yen", "JPY per $1"),
+         "CAD": ("USDCAD=X", "Canadian Dollar", "CAD per $1"), "CHF": ("USDCHF=X", "Swiss Franc", "CHF per $1"),
+         "CNY": ("USDCNY=X", "Chinese Yuan", "CNY per $1"), "INR": ("USDINR=X", "Indian Rupee", "INR per $1"),
+         "MXN": ("USDMXN=X", "Mexican Peso", "MXN per $1")}
+FUNDS_US = _cfg.get("funds_us", ["FXAIX", "VFIAX", "VTSAX", "SWPPX", "FCNTX", "VIMAX", "VSMAX", "VBTLX"])   # Yahoo mutual-fund tickers
+
+def fetch_fx_us():
+    import yfinance as yf
+    out = {}
+    for code in _cfg.get("currencies_us", list(FX_US)):
+        t, name, unit = FX_US.get(code, (f"USD{code}=X", code, f"{code} per $1"))
+        try:
+            df = yf.Ticker(t).history(period="1y", interval="1d").dropna(subset=["Close"])
+            out[code] = {"name": f"{code} \u00b7 {name}", "unit": unit, **_hist(df)}
+        except Exception as e:
+            print(f"Currency {code} unavailable: {e}")
+    return out
+
+def fetch_funds_us():
+    import yfinance as yf
+    out = []
+    for t in FUNDS_US:
+        try:
+            tk = yf.Ticker(t); df = tk.history(period="5y", interval="1d").dropna(subset=["Close"])
+            rows = [(i.date(), float(v)) for i, v in df["Close"].items()]
+            try: info = tk.info or {}
+            except Exception: info = {}
+            last, r = rows[-1][1], {}
+            def at(days):
+                x = rows[-1][0] - dt.timedelta(days=days); p = [v for d, v in rows if d <= x]
+                return p[-1] if p else None
+            for k, dd in (("1M", 30), ("3M", 91), ("6M", 182), ("1Y", 365)):
+                v = at(dd); r[k] = round((last / v - 1) * 100, 2) if v else None
+            for k, y in (("3Y", 3), ("5Y", 5)):
+                v = at(365 * y); r[k] = round(((last / v) ** (1 / y) - 1) * 100, 2) if v else None
+            tail = rows[-250:]
+            out.append({"code": t, "name": info.get("longName") or t, "house": info.get("fundFamily") or "", "cat": info.get("category") or "",
+                        "nav": round(last, 4), "date": rows[-1][0].isoformat(), "chg": round((last / rows[-2][1] - 1) * 100, 2) if len(rows) > 1 else 0.0,
+                        "r": r, "d": [d.isoformat() for d, _ in tail], "c": [round(v, 4) for _, v in tail]})
+        except Exception as e:
+            print(f"Fund {t} failed: {e}")
+    return out
+
 def fetch_fx():
+    if US: return fetch_fx_us()
     import yfinance as yf
     out = {}
     for code in CURRENCIES:
@@ -242,6 +300,7 @@ def fetch_metals():
             raw[key] = _hist(df); out[key] = {"name": name, "unit": unit.replace("Rs", "\u20b9"), **raw[key]}
         except Exception as e:
             print(f"Metal {key} unavailable: {e}")
+    if US: return out
     fxdf = yf.Ticker("USDINR=X").history(period="1y", interval="1d").dropna(subset=["Close"])
     out["USDINR"] = {"name": "USD / INR", "unit": "\u20b9 per $", **_hist(fxdf)}
     fxmap = {i.strftime("%Y-%m-%d"): float(v) for i, v in fxdf["Close"].items()}
@@ -284,7 +343,7 @@ def _mf_fetch(code):
 
 def update_extra():
     """Metals (gold, silver) and mutual funds -> extra.json. Failures are logged and never stop the run."""
-    path = os.path.join(DOCS_DIR, "extra.json")
+    path = os.path.join(DOCS_DIR, FN("extra.json"))
     try: old = json.load(open(path))
     except Exception: old = {}
     new, errs = {}, {}
@@ -295,15 +354,15 @@ def update_extra():
         if fx: new["fx"] = fx
         else: errs["fx"] = "Yahoo Finance returned no data for any currency pair"
     except Exception as e: errs["fx"] = str(e)[:120]; print(f"Currencies unavailable: {e}")
-    funds = []
-    for entry in FUNDS:
+    funds = fetch_funds_us() if US else []
+    for entry in ([] if US else FUNDS):
         try:
             code = _mf_resolve(entry)
             if code is None: print(f"Fund not found: {entry}"); continue
             funds.append(_mf_fetch(code))
         except Exception as e: print(f"Fund '{entry}' failed: {e}")
     if funds: new["funds"] = funds
-    else: errs["funds"] = "no fund could be loaded from mfapi.in (check names or use scheme codes in config.json)"
+    else: errs["funds"] = ("no fund could be loaded from Yahoo Finance" if US else "no fund could be loaded from mfapi.in (check names or use scheme codes in config.json)")
     if new or errs:
         old.update(new); old["errors"] = errs; old["updated"] = dt.datetime.now(IST).isoformat(timespec="minutes")
         os.makedirs(DOCS_DIR, exist_ok=True)
@@ -319,13 +378,13 @@ def build_report(demo=False):
     avoid = [(s, r) for s, r in ranked[::-1] if r["score"] <= -2][:TOP_N]
     export_json(data, buys, avoid, demo, rows)
     if not demo: update_extra()
-    now = dt.datetime.now(IST).strftime("%d %b %Y, %I:%M %p IST")
+    now = dt.datetime.now(IST).strftime(f"%d %b %Y, %I:%M %p {TZN}")
     L = [f"MARKET SIGNALS - {now}" + ("  [DEMO DATA]" if demo else ""), ""]
     L.append("BUY WATCHLIST (ranked)")
     if not buys: L.append("  No stock meets the entry criteria right now. Staying in cash is a valid call.")
     for i, (s, r) in enumerate(buys, 1):
-        L += [f"{i}. {s}  score {r['score']}  |  Buy ~Rs {r['price']:.2f}",
-              f"   Stop-loss Rs {r['stop']:.2f} | Target Rs {r['target']:.2f} | Qty {r['qty']} (risk {RISK_PCT}% of Rs {CAPITAL:,})",
+        L += [f"{i}. {s}  score {r['score']}  |  Buy ~{CUR}{r['price']:.2f}",
+              f"   Stop-loss {CUR}{r['stop']:.2f} | Target {CUR}{r['target']:.2f} | Qty {r['qty']} (risk {RISK_PCT}% of {CUR}{CAPITAL:,})",
               f"   WHEN TO SELL: target hit, stop hit, or {r['trail']}",
               f"   Why: {r['why']}"]
     L += ["", "AVOID / EXIT LIST"]
@@ -346,10 +405,10 @@ def publish(text):
                       data={"chat_id": chat, "text": text[:4000]}, timeout=15)
 
 def market_open(n):
-    return n.weekday() < 5 and dt.time(9, 15) <= n.time() <= dt.time(15, 45)
+    return n.weekday() < 5 and (dt.time(9, 30) <= n.time() <= dt.time(16, 15) if US else dt.time(9, 15) <= n.time() <= dt.time(15, 45))
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument("--once", action="store_true"); ap.add_argument("--demo", action="store_true"); ap.add_argument("--live", action="store_true")
+    ap = argparse.ArgumentParser(); ap.add_argument("--once", action="store_true"); ap.add_argument("--demo", action="store_true"); ap.add_argument("--live", action="store_true"); ap.add_argument("--market", default="IN")
     a = ap.parse_args()
     if a.live: return run_live()
     if a.once: return publish(build_report(a.demo))
