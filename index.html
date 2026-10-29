@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Bharat Market Analyzer – NSE &amp; BSE</title>
+<title>Market Analyzer – India &amp; US</title>
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f6f7f9;--card:#fff;--tx:#14181f;--mu:#667085;--bd:#e3e6eb;--ac:#2f5bea;--up:#0a8f4e;--dn:#d6342c;--upb:#e3f6ec;--dnb:#fde8e6}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1116;--card:#171b22;--tx:#e8ebf0;--mu:#8b94a3;--bd:#262c36;--ac:#6f93ff;--up:#35c47c;--dn:#ff6b61;--upb:#12301f;--dnb:#3a1b19}}
@@ -49,7 +49,7 @@ input[type=checkbox]{min-width:0;padding:0}.picks{display:grid;grid-template-col
 main{flex:1;min-height:0;overflow:auto;max-width:none;margin:0;padding:16px max(18px,calc((100% - 1150px)/2))}
 #hits{margin:0!important;padding:2px 0}footer{padding:8px 18px!important}aside#ovr{position:static}</style></head><body>
 <header><div class="brand"><h1>Bharat Market Analyzer<small>NSE (Nifty) &amp; BSE (Sensex) trend dashboards</small></h1></div>
-<div class="seg" id="ex"><button data-x="NSE" class="on">NSE · Nifty</button><button data-x="BSE">BSE · Sensex</button></div></header>
+<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><div class="seg" id="mk"><button data-m="IN" class="on">🇮🇳 India</button><button data-m="US">🇺🇸 US</button></div><div class="seg" id="ex"><button data-x="NSE" class="on">NSE · Nifty</button><button data-x="BSE">BSE · Sensex</button></div></div></header>
 <div id="tk"><span class="st" id="ms"></span><div style="overflow:hidden;flex:1;min-width:0"><div class="tr" id="tr"></div></div></div>
 <div class="tabs" id="tabs"></div>
 <div id="bn" class="note" style="padding:8px 18px;margin:0"></div>
@@ -58,7 +58,8 @@ main{flex:1;min-height:0;overflow:auto;max-width:none;margin:0;padding:16px max(
 <footer style="text-align:center;color:var(--mu);font-size:13px;padding:14px 18px 22px;border-top:1px solid var(--bd)">© <span id="yr">2026</span> <b style="color:var(--tx)">iRIMS Technologies</b>. All rights reserved.</footer>
 <script>
 const $=s=>document.querySelector(s);
-const fmt=(n,d=2)=>n.toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d});
+let LOC='en-IN',CUR='₹',PFX='';
+const fmt=(n,d=2)=>n.toLocaleString(LOC,{minimumFractionDigits:d,maximumFractionDigits:d});
 const cls=n=>n>=0?'up':'dn',sg=n=>(n>=0?'+':'')+fmt(n)+'%';
 function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 const hash=s=>[...s].reduce((h,c)=>Math.imul(h^c.charCodeAt(0),16777619),2166136261);
@@ -69,9 +70,12 @@ function series(k,base,vol,dr){if(cache[k])return cache[k];if(REAL[k])return cac
  const f=base/a[N-1];return cache[k]=a.map(v=>v*f)}
 const IDX={NSE:[['NIFTY 50',24800,.007,.09],['NIFTY BANK',53500,.009,.08],['NIFTY IT',38500,.011,.04],['NIFTY NEXT 50',69000,.009,.1],['NIFTY MIDCAP 100',57500,.011,.15],['NIFTY FMCG',56000,.007,.03]],
 BSE:[['SENSEX',81500,.007,.09],['BSE 500',35500,.008,.11],['BSE MIDCAP',46500,.011,.14],['BSE SMALLCAP',53000,.012,.17],['BSE BANKEX',60500,.009,.08],['BSE IT',37500,.011,.04]]};
-const ST=[['RELIANCE','Reliance Industries','Energy',1420,500325],['TCS','Tata Consultancy','IT',3250,532540],['HDFCBANK','HDFC Bank','Banking',1000,500180],['ICICIBANK','ICICI Bank','Banking',1420,532174],['INFY','Infosys','IT',1560,500209],['SBIN','State Bank of India','Banking',830,500112],['BHARTIARTL','Bharti Airtel','Telecom',1950,532454],['ITC','ITC Ltd','FMCG',415,500875],['LT','Larsen & Toubro','Infra',3600,500510],['HINDUNILVR','Hindustan Unilever','FMCG',2450,500696],['SUNPHARMA','Sun Pharma','Pharma',1700,524715],['MARUTI','Maruti Suzuki','Auto',12800,532500],['TATAMOTORS','Tata Motors','Auto',700,500570],['M&M','Mahindra & Mahindra','Auto',3300,500520],['AXISBANK','Axis Bank','Banking',1150,532215],['WIPRO','Wipro','IT',260,507685],['NTPC','NTPC','Power',340,532555],['ONGC','ONGC','Energy',245,500312],['TITAN','Titan Company','Consumer',3500,500114],['ASIANPAINT','Asian Paints','Consumer',2350,500820],['DRREDDY','Dr Reddy\'s Labs','Pharma',1250,500124],['ADANIPORTS','Adani Ports','Infra',1400,532921]]
+const ST_IN=[['RELIANCE','Reliance Industries','Energy',1420,500325],['TCS','Tata Consultancy','IT',3250,532540],['HDFCBANK','HDFC Bank','Banking',1000,500180],['ICICIBANK','ICICI Bank','Banking',1420,532174],['INFY','Infosys','IT',1560,500209],['SBIN','State Bank of India','Banking',830,500112],['BHARTIARTL','Bharti Airtel','Telecom',1950,532454],['ITC','ITC Ltd','FMCG',415,500875],['LT','Larsen & Toubro','Infra',3600,500510],['HINDUNILVR','Hindustan Unilever','FMCG',2450,500696],['SUNPHARMA','Sun Pharma','Pharma',1700,524715],['MARUTI','Maruti Suzuki','Auto',12800,532500],['TATAMOTORS','Tata Motors','Auto',700,500570],['M&M','Mahindra & Mahindra','Auto',3300,500520],['AXISBANK','Axis Bank','Banking',1150,532215],['WIPRO','Wipro','IT',260,507685],['NTPC','NTPC','Power',340,532555],['ONGC','ONGC','Energy',245,500312],['TITAN','Titan Company','Consumer',3500,500114],['ASIANPAINT','Asian Paints','Consumer',2350,500820],['DRREDDY','Dr Reddy\'s Labs','Pharma',1250,500124],['ADANIPORTS','Adani Ports','Infra',1400,532921]]
 .map(([s,n,sec,p,b],i)=>({s,n,sec,p,b,v:.012+(hash(s)%7)/1000,d:((hash(s)%20)-4)/100}));
-try{JSON.parse(localStorage.getItem('cs')||'[]').forEach(([s,n,sec,p])=>ST.push(mkStock(s,n,sec,p)))}catch(e){}
+let ST=ST_IN;
+const mkS=([s,n,sec,p])=>({s,n,sec,p,b:'—',v:.012+(hash(s)%7)/1000,d:((hash(s)%20)-4)/100});
+const ST_US=[['AAPL','Apple','Technology',230],['MSFT','Microsoft','Technology',430],['NVDA','NVIDIA','Technology',135],['AMZN','Amazon','Consumer Cyclical',210],['GOOGL','Alphabet','Communication',185],['META','Meta Platforms','Communication',580],['TSLA','Tesla','Consumer Cyclical',250],['AVGO','Broadcom','Technology',190],['JPM','JPMorgan Chase','Financials',240],['V','Visa','Financials',300],['MA','Mastercard','Financials',510],['UNH','UnitedHealth','Healthcare',520],['LLY','Eli Lilly','Healthcare',800],['XOM','Exxon Mobil','Energy',115],['CVX','Chevron','Energy',155],['JNJ','Johnson & Johnson','Healthcare',160],['PG','Procter & Gamble','Consumer Staples',170],['HD','Home Depot','Consumer Cyclical',390],['COST','Costco','Consumer Staples',940],['WMT','Walmart','Consumer Staples',90],['KO','Coca-Cola','Consumer Staples',65],['PEP','PepsiCo','Consumer Staples',165],['NFLX','Netflix','Communication',880],['ADBE','Adobe','Technology',500],['CRM','Salesforce','Technology',330],['AMD','AMD','Technology',150],['ORCL','Oracle','Technology',170],['BAC','Bank of America','Financials',45],['DIS','Walt Disney','Communication',105],['CAT','Caterpillar','Industrials',380]].map(mkS);
+IDX.US=[['S&P 500',6800,.0065,.1],['NASDAQ',23000,.009,.14],['DOW JONES',47000,.006,.07],['NASDAQ 100',25000,.009,.15],['RUSSELL 2000',2400,.01,.08],['VIX',17,.04,0]];
 const S=x=>series(x.s,x.p,x.v,x.d), I=x=>series(x[0],x[1],x[2],x[3]);
 const sma=(a,n)=>a.map((_,i)=>i<n-1?null:a.slice(i-n+1,i+1).reduce((p,c)=>p+c,0)/n);
 function rsi(a,n=14){let g=0,l=0;for(let i=a.length-n;i<a.length;i++){const d=a[i]-a[i-1];d>0?g+=d:l-=d}return l?100-100/(1+g/l):100}
@@ -79,10 +83,11 @@ const chg=(a,d=1)=>(a[a.length-1]/a[a.length-1-d]-1)*100;
 let st={x:'NSE',tab:'Overview',idx:0,sym:'RELIANCE',rg:126,wl:[]};
 try{st.wl=JSON.parse(localStorage.getItem('wl')||'[]')}catch(e){}
 if(!st.wl.length)st.wl=['TCS','HDFCBANK','ITC'];
-const saveWL=()=>{try{localStorage.setItem('wl',JSON.stringify(st.wl))}catch(e){}};
+const K=b=>st.m=='US'?b+'_us':b;
+const saveWL=()=>{try{localStorage.setItem(K('wl'),JSON.stringify(st.wl))}catch(e){}};
 function spark(a,w=180,h=44){const mn=Math.min(...a),mx=Math.max(...a),p=a.map((v,i)=>(i/(a.length-1)*w).toFixed(1)+','+(h-2-(v-mn)/(mx-mn||1)*(h-4)).toFixed(1));
  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:44px"><polyline pathLength="1" fill="none" stroke="var(${a[a.length-1]>=a[0]?'--up':'--dn'})" stroke-width="1.6" points="${p.join(' ')}"/></svg>`}
-function chart(id,ser,n,labels,u='₹'){const W=700,H=280,L=52,B=8,T=8,w=W-L-6,h=H-T-B;
+function chart(id,ser,n,labels,u=CUR){const W=700,H=280,L=52,B=8,T=8,w=W-L-6,h=H-T-B;
  const sl=a=>a.slice(-n),all=ser.flatMap(s=>sl(s.d).filter(v=>v!=null)),mn=Math.min(...all),mx=Math.max(...all);
  const X=i=>L+i/(n-1)*w,Y=v=>T+(1-(v-mn)/(mx-mn||1))*h;
  let g='';for(let k=0;k<=4;k++){const v=mn+(mx-mn)*k/4,y=Y(v);g+=`<line x1="${L}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--bd)"/><text x="${L-6}" y="${y+4}" text-anchor="end" font-size="11" fill="var(--mu)">${fmt(v,0)}</text>`}
@@ -101,12 +106,12 @@ let CFG={name:'',hidden:[],tabs:[]};
 try{const c=JSON.parse(localStorage.getItem('cfg')||'null');if(c)CFG=Object.assign(CFG,c)}catch(e){}
 const saveCFG=()=>{try{localStorage.setItem('cfg',JSON.stringify(CFG))}catch(e){}};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const ALLIDX=[...IDX.NSE,...IDX.BSE];
+let ALLIDX=[...IDX.NSE,...IDX.BSE];
 const lookup=k=>{const s=ST.find(x=>x.s==k);if(s)return{n:s.n,a:S(s),st:s};const i=ALLIDX.find(x=>x[0]==k);return i?{n:k,a:I(i)}:null};
 function render(){
  const vis=BT.filter(t=>!CFG.hidden.includes(t)),all=[...vis.map(t=>({k:t,n:t})),...CFG.tabs.map(t=>({k:'c:'+t.id,n:(t.lock&&CFG.pin?(st.unl?'🔓 ':'🔒 '):'')+t.name})),{k:'Customize',n:'⚙ Customize'}];
  if(!all.some(t=>t.k==st.tab))st.tab=all[0].k;
- const nm=CFG.name.trim();$('h1').firstChild.nodeValue=nm?nm+'’s Market Dashboard':'Bharat Market Analyzer';document.title=nm?nm+'’s Market Dashboard':'Bharat Market Analyzer';
+ const nm=CFG.name.trim();$('h1').firstChild.nodeValue=nm?nm+'’s Market Dashboard':MKS[st.m].title;document.title=nm?nm+'’s Market Dashboard':MKS[st.m].title;
  $('#tabs').innerHTML=all.map(t=>`<button class="${t.k==st.tab?'on':''}" data-t="${esc(t.k)}">${esc(t.n)}</button>`).join('')+'<button data-a="new" title="Add your own tab">＋</button>';
  $('#ex').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.x==st.x));
  st.enter=st.tab=='Overview';const f=({Overview:ov,'Stock Analyzer':an,Sectors:sec,'Movers & Watchlist':mv,'Mutual Funds':mf,Metals:mt,Currencies:cu,'Agent Signals':ag,'My Stocks':ms,Customize:cz})[st.tab];
@@ -114,7 +119,7 @@ function render(){
 function cv(t){if(!t)return;const rows=t.items.map(k=>({k,...lookup(k)})).filter(r=>r.a);
  const head=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(t.name)}</h2><span>${t.lock&&CFG.pin?'<button class="btn o" data-a="lockNow">🔒 Lock now</button> ':''}<button class="btn o" data-a="edit" data-id="${t.id}">Edit tab</button></span></div>`;
  if(!rows.length){$('#app').innerHTML=head+'<div class="card">This tab is empty. Use Edit tab to choose stocks or indices.</div>';return}
- const body=t.view=='table'?`<div class="card wrap"><table><tr><th>Name</th><th class="r">Price ₹</th><th class="r">1D</th><th class="r">1W</th><th class="r">1M</th><th class="r">3M</th><th class="r">RSI</th></tr>${rows.map(r=>{const a=r.a;return `<tr class="${r.st?'lk':''}" ${r.st?`data-s="${esc(r.k)}"`:''}><td>${esc(r.k)}<div class="nm">${esc(r.n)}</div></td><td class="r">${fmt(a[N-1])}</td>${[1,5,21,63].map(d=>`<td class="r ${cls(chg(a,d))}">${sg(chg(a,d))}</td>`).join('')}<td class="r">${fmt(rsi(a),0)}</td></tr>`}).join('')}</table></div>`
+ const body=t.view=='table'?`<div class="card wrap"><table><tr><th>Name</th><th class="r">Price ${CUR}</th><th class="r">1D</th><th class="r">1W</th><th class="r">1M</th><th class="r">3M</th><th class="r">RSI</th></tr>${rows.map(r=>{const a=r.a;return `<tr class="${r.st?'lk':''}" ${r.st?`data-s="${esc(r.k)}"`:''}><td>${esc(r.k)}<div class="nm">${esc(r.n)}</div></td><td class="r">${fmt(a[N-1])}</td>${[1,5,21,63].map(d=>`<td class="r ${cls(chg(a,d))}">${sg(chg(a,d))}</td>`).join('')}<td class="r">${fmt(rsi(a),0)}</td></tr>`}).join('')}</table></div>`
  :`<div class="grid">${rows.map(r=>{const a=r.a;return `<div class="card ${r.st?'click':''}" ${r.st?`data-s="${esc(r.k)}"`:''}><div class="nm">${esc(r.k)}${r.st?' · '+esc(r.n):''}</div><div class="big">${fmt(a[N-1])}</div><div><span class="${cls(chg(a))}">${sg(chg(a))}</span> <span class="nm">1D</span> · <span class="${cls(chg(a,21))}">${sg(chg(a,21))}</span> <span class="nm">1M</span> · <span class="nm">RSI ${fmt(rsi(a),0)}</span></div>${spark(a.slice(-60))}</div>`}).join('')}</div>`;
  $('#app').innerHTML=head+body+'<p class="note">Tap a stock to open it in the analyzer.</p>'}
 function tabForm(ed){const box=l=>l.map(([k,lab])=>`<label class="pk"><input type="checkbox" value="${esc(k)}" ${ed.items.includes(k)?'checked':''}> ${esc(lab)}</label>`).join('');
@@ -158,7 +163,7 @@ function ov(){const en=st.enter;st.enter=false;ov0(en);animChart('#c1');if(en)do
 function ov0(en){const L=IDX[st.x];if(st.idx>=L.length)st.idx=0;
  $('#app').innerHTML=`<div class="split${en?' enter':''}"><div style="min-width:0"><div class="grid">${L.map((x,i)=>{const a=I(x);return `<div class="card click ${i==st.idx?'sel':''}" data-i="${i}" style="--i:${i}"><div class="nm">${x[0]}</div><div class="big" data-v="${a[N-1]}">${fmt(a[N-1])}</div><div class="${cls(chg(a))}">${sg(chg(a))} <span class="nm">1D</span></div>${spark(a.slice(-60))}</div>`}).join('')}</div>
  <h2>${L[st.idx][0]} · trend</h2><div class="card"><div class="row" id="rg"></div><div class="chart" id="c1"></div><div class="stats" id="s1"></div></div>
- <h2>Breadth (${st.x==='NSE'?'Nifty 22':'Sensex-linked'} tracked stocks)</h2><div class="card" id="br"></div>
+ <h2>Breadth (${st.m=='US'?'US large-cap':st.x==='NSE'?'Nifty 22':'Sensex-linked'} tracked stocks)</h2><div class="card" id="br"></div>
  <p class="note">Data source is shown in the banner at the top. Not investment advice.</p></div><aside id="ovr"></aside></div>`;
  rangeBtns();ovList();const a=I(L[st.idx]);
  chart('#c1',[{d:a,c:'var(--ac)'},{d:sma(a,50),c:'#e59f0a',w:1.2,da:1},{d:sma(a,200),c:'#9b59b6',w:1.2,da:1}],Math.min(st.rg,N),dayLbl);
@@ -173,21 +178,21 @@ function ovW(title,list,h,hint,live){const body=list.length?`<div class="vm" sty
  return `<div class="card" style="padding:0;margin-bottom:12px"><div style="padding:10px 13px;border-bottom:1px solid var(--bd)"><b>${title}</b> ${live?'<span class="up lv">●</span> ':''}<span class="nm">${hint}</span></div>${body}</div>`}
 function ovList(){const el=$('#ovr');if(!el)return;loadEX();
  const last=s=>{const c=s.c,n=c.length;return{p:c[n-1],c:n>1?(c[n-1]/c[n-2]-1)*100:0}};
- const sk=ST.map(x=>{const q=qt(x.s);return q?wrow(`data-s="${esc(x.s)}"`,x.s,x.n+(st.x=='BSE'&&x.b&&x.b!='—'?' · BSE '+x.b:''),'₹'+fmt(q.p),q.c):''}).filter(Boolean);
- const fd=((EX&&EX.funds)||[]).map(f=>wrow(`data-go="Mutual Funds|${esc(f.code)}"`,sh(f.name),(f.cat||'').replace(/^[A-Za-z]+ Scheme - /,''),'₹'+fmt(f.nav),f.chg));
+ const sk=ST.map(x=>{const q=qt(x.s);return q?wrow(`data-s="${esc(x.s)}"`,x.s,x.n+(st.x=='BSE'&&x.b&&x.b!='—'?' · BSE '+x.b:''),CUR+fmt(q.p),q.c):''}).filter(Boolean);
+ const fd=((EX&&EX.funds)||[]).map(f=>wrow(`data-go="Mutual Funds|${esc(f.code)}"`,sh(f.name),(f.cat||'').replace(/^[A-Za-z]+ Scheme - /,''),CUR+fmt(f.nav),f.chg));
  const M=(EX&&EX.metals)||{},mm=MO.filter(k=>M[k]&&k!='USDINR').map(k=>{const z=last(M[k]);return wrow(`data-go="Metals|${k}"`,M[k].name,M[k].unit,fmt(z.p),z.c)});
  const X=(EX&&EX.fx)||{},cc=Object.keys(X).map(k=>{const z=last(X[k]);return wrow(`data-go="Currencies|${k}"`,X[k].name,X[k].unit,fmt(z.p,3),z.c)});
  const key=[sk,fd,mm,cc].map(a=>a.join('')).join('|')+mkt().open;if(el.dataset.h===key)return;el.dataset.h=key;
- el.innerHTML=ovW(`All stocks <span class="nm">· ${sk.length}</span>`,sk,Math.max(220,Math.min(340,innerHeight-400)),'hover to pause · click to analyze',mkt().open)+ovW('Mutual funds',fd,200,'click to open')+ovW('Metals',mm,200,'gold &amp; silver')+ovW('Currencies vs ₹',cc,200,'click to open');
+ el.innerHTML=ovW(`All stocks <span class="nm">· ${sk.length}</span>`,sk,Math.max(220,Math.min(340,innerHeight-400)),'hover to pause · click to analyze',mkt().open)+ovW('Mutual funds',fd,200,'click to open')+ovW('Metals',mm,200,'gold &amp; silver')+ovW('Currencies vs '+CUR,cc,200,'click to open');
  el.querySelectorAll('.vt').forEach(vt=>{vt.style.animationDuration=Math.max(18,vt.scrollHeight/2/30)+'s'})}
-const cr=v=>fmt(v/1e7,0);
+const mcap=v=>st.m=='US'?'$'+(v>=1e12?fmt(v/1e12)+'T':fmt(v/1e9,1)+'B'):'₹'+fmt(v/1e7,0)+' Cr';
 function side(x){const R=AG&&!AG.demo&&AG.reports&&AG.reports[x.s],el=$('#side');
  if(!R){el.innerHTML=`<div class="card"><h2 style="margin:0 0 6px">Report · ${esc(x.s)}</h2><div class="nm">${!AG||AG.demo?'Reports appear after the first agent run on GitHub.':!AG.reports?'The agent data has no reports yet. Update market_agent.py on GitHub to the latest version, then run the workflow again.':'This stock is not covered by the agent. Add its symbol to the watchlist in config.json to get reports.'}</div></div>`;return}
  const g=R.signal||{},f=R.fund||{},nw=(R.news||[]).filter(n=>/^https?:\/\//.test(n.u)),up=f.target&&g.price?(f.target/g.price-1)*100:null;
- const fr=[['Market cap',f.mcap?'₹'+cr(f.mcap)+' Cr':null],['P/E (TTM)',f.pe?fmt(f.pe,1):null],['Forward P/E',f.fpe?fmt(f.fpe,1):null],['P/B',f.pb?fmt(f.pb,1):null],['EPS (TTM)',f.eps!=null?'₹'+fmt(f.eps):null],['ROE',f.roe!=null?fmt(f.roe*100,1)+'%':null],['Profit margin',f.margin!=null?fmt(f.margin*100,1)+'%':null],['Debt/Equity',f.de!=null?fmt(f.de,0):null]].filter(r=>r[1]);
+ const fr=[['Market cap',f.mcap?mcap(f.mcap):null],['P/E (TTM)',f.pe?fmt(f.pe,1):null],['Forward P/E',f.fpe?fmt(f.fpe,1):null],['P/B',f.pb?fmt(f.pb,1):null],['EPS (TTM)',f.eps!=null?CUR+fmt(f.eps):null],['ROE',f.roe!=null?fmt(f.roe*100,1)+'%':null],['Profit margin',f.margin!=null?fmt(f.margin*100,1)+'%':null],['Debt/Equity',f.de!=null?fmt(f.de,0):null]].filter(r=>r[1]);
  el.innerHTML=`<div class="card"><h2 style="margin:0 0 8px">Report · ${esc(x.s)}</h2>
- ${g.score!=null?`<div class="row" style="margin:0 0 6px"><span class="badge ${g.score>=4?'up':g.score<=-2?'dn':'n'}">Signal score ${g.score}</span></div><div class="nm">Entry ~₹${fmt(g.price)} · Stop ₹${fmt(g.stop)} · Target ₹${fmt(g.target)}</div><div class="nm" style="margin-top:4px">${esc(g.why||'')}</div><div class="nm" style="margin-top:4px">Sell: ${esc(g.trail||'')}</div>`:''}
- ${f.rec||f.target?`<h2 style="margin:14px 0 6px">Analyst view</h2><div class="nm">${f.rec?'Consensus: <b>'+esc(String(f.rec).replace(/_/g,' '))+'</b>':''}${f.n?' ('+f.n+' analysts)':''}${f.target?'<br>Mean target ₹'+fmt(f.target)+(up!=null?' ('+sg(up)+' vs entry)':''):''}</div>`:''}
+ ${g.score!=null?`<div class="row" style="margin:0 0 6px"><span class="badge ${g.score>=4?'up':g.score<=-2?'dn':'n'}">Signal score ${g.score}</span></div><div class="nm">Entry ~${CUR}${fmt(g.price)} · Stop ${CUR}${fmt(g.stop)} · Target ${CUR}${fmt(g.target)}</div><div class="nm" style="margin-top:4px">${esc(g.why||'')}</div><div class="nm" style="margin-top:4px">Sell: ${esc(g.trail||'')}</div>`:''}
+ ${f.rec||f.target?`<h2 style="margin:14px 0 6px">Analyst view</h2><div class="nm">${f.rec?'Consensus: <b>'+esc(String(f.rec).replace(/_/g,' '))+'</b>':''}${f.n?' ('+f.n+' analysts)':''}${f.target?'<br>Mean target '+CUR+fmt(f.target)+(up!=null?' ('+sg(up)+' vs entry)':''):''}</div>`:''}
  ${fr.length?`<h2 style="margin:14px 0 6px">Fundamentals</h2><div class="stats" style="margin:0;grid-template-columns:1fr 1fr">${fr.map(([k,v])=>`<div><span class="nm">${k}</span><b style="font-size:14px">${v}</b></div>`).join('')}</div>`:''}
  <h2 style="margin:14px 0 6px">Latest news</h2><div class="nw">${nw.length?nw.map(n=>`<div><a href="${esc(n.u)}" target="_blank" rel="noopener noreferrer">${esc(n.t)}</a><div class="nm">${esc(n.p)}${n.d?' · '+esc(n.d):''}</div></div>`).join(''):'<div class="nm">No headlines available.</div>'}</div>
  <p class="note" style="margin-bottom:0">Updated ${new Date(AG.updated).toLocaleString('en-IN')}. Fundamentals and news come from Yahoo Finance via the agent and can be missing or delayed.</p></div>`}
@@ -202,9 +207,9 @@ function draw(){const x=ST.find(s=>s.s==st.sym.toUpperCase());if(!x){$('#out').i
  if(m20>0){sc++;why.push('Positive 20-day momentum')}else why.push('Negative 20-day momentum');
  const v=['Strong Downtrend','Downtrend','Sideways / Neutral','Uptrend','Strong Uptrend'][sc],bc=sc>=3?'up':sc<=1?'dn':'n';
  const pos=(p-lo)/(hi-lo)*100;
- $('#out').innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><div><div class="nm">${x.n} · ${x.sec} · ${st.x==='NSE'?'NSE: '+x.s:'BSE: '+x.b}</div><span class="big">₹${fmt(p)}</span> <span class="${cls(chg(a))}">${sg(chg(a))}</span></div><span class="badge ${bc}">${v}</span></div>
+ $('#out').innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><div><div class="nm">${x.n} · ${x.sec} · ${st.m=='US'?'US: '+x.s:st.x==='NSE'?'NSE: '+x.s:'BSE: '+x.b}</div><span class="big">${CUR}${fmt(p)}</span> <span class="${cls(chg(a))}">${sg(chg(a))}</span></div><span class="badge ${bc}">${v}</span></div>
  <div class="row" id="ct"></div><div class="row" id="rg"></div><div class="chart" id="c2"></div><div class="nm">— Price &nbsp;<span style="color:#e59f0a">- - 20-DMA</span> &nbsp;<span style="color:#9b59b6">- - 50-DMA</span></div>
- <div class="stats">${[['1W',sg(chg(a,5))],['1M',sg(chg(a,21))],['6M',sg(chg(a,125))],['1Y',sg(chg(a,249))],['RSI (14)',fmt(R,1)],['52W range pos.',fmt(pos,0)+'%'],['52W high','₹'+fmt(hi)],['52W low','₹'+fmt(lo)]].map(([k,t])=>`<div><span class="nm">${k}</span><b>${t}</b></div>`).join('')}</div>
+ <div class="stats">${[['1W',sg(chg(a,5))],['1M',sg(chg(a,21))],['6M',sg(chg(a,125))],['1Y',sg(chg(a,249))],['RSI (14)',fmt(R,1)],['52W range pos.',fmt(pos,0)+'%'],['52W high',CUR+fmt(hi)],['52W low',CUR+fmt(lo)]].map(([k,t])=>`<div><span class="nm">${k}</span><b>${t}</b></div>`).join('')}</div>
  <h2>Why this signal</h2><ul style="margin:0;padding-left:18px">${why.map(w=>`<li>${w}</li>`).join('')}</ul></div><div id="hs"></div><p class="note">Rule-based signal for illustration only — not investment advice.</p>`;
  rangeBtns();ctBtns();chart('#c2',[{d:a,c:'var(--ac)'},{d:s20,c:'#e59f0a',w:1.2,da:1},{d:s50,c:'#9b59b6',w:1.2,da:1}],st.rg,dayLbl);
  $('#wl').textContent=st.wl.includes(x.s)?'★ In watchlist':'☆ Watchlist';side(x);ctDraw(x);hist(x)}
@@ -213,15 +218,15 @@ function sec(){const m={};ST.forEach(s=>{(m[s.sec]=m[s.sec]||[]).push(s)});
  $('#app').innerHTML=`<h2 style="margin-top:0">Sector heatmap · 1D average change</h2><div class="heat">${rows.map(([k,c,v])=>`<div style="background:color-mix(in srgb,var(${c>=0?'--up':'--dn'}) ${Math.min(55,Math.abs(c)*28+8)}%,var(--card));border:1px solid var(--bd)" data-sec="${k}"><span class="nm" style="color:inherit;opacity:.8">${k} · ${v.length}</span><b>${sg(c)}</b></div>`).join('')}</div><div id="sd"></div>
  <p class="note">Tap a sector to list its stocks.</p>`}
 function mv(){const d=ST.map(s=>({...s,c:chg(S(s)),p:S(s)[N-1]})).sort((a,b)=>b.c-a.c);
- const T=(l,t)=>`<div class="wrap"><table><tr><th>Stock</th><th class="r">LTP ₹</th><th class="r">1D</th></tr>${l.map(s=>`<tr class="lk" data-s="${s.s}"><td>${s.s}<div class="nm">${s.sec}</div></td><td class="r">${fmt(s.p)}</td><td class="r ${cls(s.c)}">${sg(s.c)}</td></tr>`).join('')}</table></div>`;
+ const T=(l,t)=>`<div class="wrap"><table><tr><th>Stock</th><th class="r">LTP ${CUR}</th><th class="r">1D</th></tr>${l.map(s=>`<tr class="lk" data-s="${s.s}"><td>${s.s}<div class="nm">${s.sec}</div></td><td class="r">${fmt(s.p)}</td><td class="r ${cls(s.c)}">${sg(s.c)}</td></tr>`).join('')}</table></div>`;
  const w=d.filter(s=>st.wl.includes(s.s));
  $('#app').innerHTML=`<div class="cols"><div class="card"><h2 style="margin-top:0">Top gainers</h2>${T(d.slice(0,5))}</div><div class="card"><h2 style="margin-top:0">Top losers</h2>${T(d.slice(-5).reverse())}</div></div>
  <h2>My watchlist</h2><div class="card">${w.length?T(w):'<span class="nm">Empty. Add stocks from the Stock Analyzer.</span>'}</div><p class="note">Watchlist is saved in this browser.</p>`}
 function mkStock(sym,n,sec,p){const h=hash(sym);return{s:sym,n,sec,p,b:'—',v:.012+(h%7)/1000,d:((h%20)-4)/100,custom:true}}
-const saveCustom=()=>{try{localStorage.setItem('cs',JSON.stringify(ST.filter(s=>s.custom).map(s=>[s.s,s.n,s.sec,s.p])))}catch(e){}};
+const saveCustom=()=>{try{localStorage.setItem(K('cs'),JSON.stringify(ST.filter(s=>s.custom).map(s=>[s.s,s.n,s.sec,s.p])))}catch(e){}};
 function ms(){const c=ST.filter(s=>s.custom);
- $('#app').innerHTML=`<div class="card"><h2 style="margin-top:0">Add your own stocks</h2><p class="nm">One stock per line: <b>SYMBOL, Price, Company name, Sector</b>. Company name and sector are optional. Example: <code>ZOMATO, 250, Zomato, Consumer</code></p><textarea id="ta" rows="6" placeholder="ZOMATO, 250, Zomato, Consumer&#10;IRCTC, 780" style="width:100%;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:8px;font:inherit"></textarea><div class="row" style="margin:10px 0 0"><button class="btn" id="add">Add stocks</button><span id="msg" class="nm">${st.msg||''}</span></div></div>
- <h2>Your added stocks (${c.length})</h2><div class="card wrap">${c.length?`<table><tr><th>Symbol</th><th>Name</th><th>Sector</th><th class="r">Price ₹</th><th></th></tr>${c.map(s=>`<tr><td>${s.s}</td><td>${s.n}</td><td>${s.sec}</td><td class="r">${fmt(s.p)}</td><td class="r"><button class="btn o" data-del="${s.s}">Remove</button></td></tr>`).join('')}</table>`:'<span class="nm">None yet.</span>'}</div>
+ $('#app').innerHTML=`<div class="card"><h2 style="margin-top:0">Add your own stocks</h2><p class="nm">One stock per line: <b>SYMBOL, Price, Company name, Sector</b>. Company name and sector are optional. Example: <code>${st.m=='US'?'PLTR, 80, Palantir, Technology':'ZOMATO, 250, Zomato, Consumer'}</code></p><textarea id="ta" rows="6" placeholder="ZOMATO, 250, Zomato, Consumer&#10;IRCTC, 780" style="width:100%;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:8px;font:inherit"></textarea><div class="row" style="margin:10px 0 0"><button class="btn" id="add">Add stocks</button><span id="msg" class="nm">${st.msg||''}</span></div></div>
+ <h2>Your added stocks (${c.length})</h2><div class="card wrap">${c.length?`<table><tr><th>Symbol</th><th>Name</th><th>Sector</th><th class="r">Price ${CUR}</th><th></th></tr>${c.map(s=>`<tr><td>${s.s}</td><td>${s.n}</td><td>${s.sec}</td><td class="r">${fmt(s.p)}</td><td class="r"><button class="btn o" data-del="${s.s}">Remove</button></td></tr>`).join('')}</table>`:'<span class="nm">None yet.</span>'}</div>
  <p class="note">Added stocks appear in the analyzer search, sector heatmap, movers and watchlist. Their price history is simulated around the price you enter, not fetched live. Saved in this browser.</p>`;st.msg=''}
 function addStocks(){let ok=0,bad=0;$('#ta').value.split('\n').forEach(l=>{const p=l.split(',').map(x=>x.trim());if(!p[0])return;const sym=p[0].toUpperCase(),pr=parseFloat(p[1]);
   if(!(pr>0)||ST.some(s=>s.s==sym)){bad++;return}ST.push(mkStock(sym,p[2]||sym,p[3]||'Other',pr));ok++});
@@ -230,7 +235,7 @@ function delStock(sym){const i=ST.findIndex(s=>s.s==sym&&s.custom);if(i>=0)ST.sp
 function banner(){$('#bn').innerHTML=AG&&!AG.demo?`<span class="up">●</span> Market-agent data (daily closes, delayed) · updated ${new Date(AG.updated).toLocaleString('en-IN')} · anything the agent could not fetch shows simulated values`:'Simulated demo data. Real data appears after the first agent run on GitHub.'}
 function ag(){if(!AG||AG.demo){$('#app').innerHTML='<div class="card">No agent data yet. Signals appear after the first GitHub Actions run (Actions tab → market-agent → Run workflow).</div>';return}
  const B=AG.buys,A=AG.avoid;
- $('#app').innerHTML=`<h2 style="margin-top:0">Buy watchlist</h2>${B.length?B.map(b=>`<div class="card click" data-s="${b.s}" style="margin-bottom:10px"><div class="row" style="margin:0;justify-content:space-between"><b>${b.s}</b><span class="badge up">score ${b.score}</span></div><div>Buy ~₹${fmt(b.price)} · Stop ₹${fmt(b.stop)} · Target ₹${fmt(b.target)} · Qty ${b.qty}</div><div class="nm">Sell: target or stop hit, or ${b.trail}</div><div class="nm">${b.why}</div></div>`).join(''):'<div class="card nm">No stock meets the entry criteria right now. Staying in cash is a valid call.</div>'}
+ $('#app').innerHTML=`<h2 style="margin-top:0">Buy watchlist</h2>${B.length?B.map(b=>`<div class="card click" data-s="${b.s}" style="margin-bottom:10px"><div class="row" style="margin:0;justify-content:space-between"><b>${b.s}</b><span class="badge up">score ${b.score}</span></div><div>Buy ~${CUR}${fmt(b.price)} · Stop ${CUR}${fmt(b.stop)} · Target ${CUR}${fmt(b.target)} · Qty ${b.qty}</div><div class="nm">Sell: target or stop hit, or ${b.trail}</div><div class="nm">${b.why}</div></div>`).join(''):'<div class="card nm">No stock meets the entry criteria right now. Staying in cash is a valid call.</div>'}
  <h2>Avoid / exit</h2><div class="card wrap">${A.length?`<table><tr><th>Stock</th><th class="r">Score</th><th>Reason</th></tr>${A.map(b=>`<tr class="lk" data-s="${b.s}"><td>${b.s}</td><td class="r">${b.score}</td><td class="nm">${b.why}</td></tr>`).join('')}</table>`:'<span class="nm">None.</span>'}</div><p class="note">Rule-based signals from daily data. Not investment advice.</p>`}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-t],[data-x],[data-i],[data-r],[data-s],[data-sec],[data-del],#add,#go,#wl');if(!t)return;
  if(t.dataset.t){st.tab=t.dataset.t;render()}
@@ -239,7 +244,7 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-t],[data-x
  else if(t.dataset.r){st.rg=+t.dataset.r;st.tab=='Overview'?ov():draw()}
  else if(t.dataset.s){st.sym=t.dataset.s;st.tab='Stock Analyzer';render()}
  else if(t.dataset.sec){const l=ST.filter(s=>s.sec==t.dataset.sec).map(s=>({...s,c:chg(S(s)),p:S(s)[N-1]}));
-  $('#sd').innerHTML=`<h2>${t.dataset.sec}</h2><div class="card wrap"><table><tr><th>Stock</th><th class="r">LTP ₹</th><th class="r">1D</th><th class="r">1M</th></tr>${l.map(s=>`<tr class="lk" data-s="${s.s}"><td>${s.n}</td><td class="r">${fmt(s.p)}</td><td class="r ${cls(s.c)}">${sg(s.c)}</td><td class="r ${cls(chg(S(s),21))}">${sg(chg(S(s),21))}</td></tr>`).join('')}</table></div>`}
+  $('#sd').innerHTML=`<h2>${t.dataset.sec}</h2><div class="card wrap"><table><tr><th>Stock</th><th class="r">LTP ${CUR}</th><th class="r">1D</th><th class="r">1M</th></tr>${l.map(s=>`<tr class="lk" data-s="${s.s}"><td>${s.n}</td><td class="r">${fmt(s.p)}</td><td class="r ${cls(s.c)}">${sg(s.c)}</td><td class="r ${cls(chg(S(s),21))}">${sg(chg(S(s),21))}</td></tr>`).join('')}</table></div>`}
  else if(t.id=='add'){addStocks()}
  else if(t.dataset.del){delStock(t.dataset.del)}
  else if(t.id=='go'){st.sym=$('#q').value.trim()||st.sym;draw()}
@@ -266,12 +271,12 @@ document.addEventListener('click',async e=>{const t=e.target.closest('[data-a]')
  }catch(err){sm.textContent='Failed: '+err.message}});
 document.addEventListener('change',e=>{if(e.target.id!='bf')return;const f=e.target.files[0];if(!f)return;if(CFG.pin&&!st.unl){alert('Unlock first: Customize → Privacy.');e.target.value='';return}const r=new FileReader();r.onload=()=>{try{applyBk(JSON.parse(r.result));render();alert('Backup restored.')}catch(err){alert('That file could not be read.')}};r.readAsText(f)});
 let LV=null,tkH='';
-function mkt(){const p={};new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Kolkata',weekday:'short',hour:'numeric',minute:'numeric',hourCycle:'h23'}).formatToParts(new Date()).forEach(x=>p[x.type]=x.value);const m=+p.hour*60+ +p.minute;return{open:!['Sat','Sun'].includes(p.weekday)&&m>=555&&m<=930,left:930-m}}
+function mkt(){const M=MKS[st.m],p={};new Intl.DateTimeFormat('en-US',{timeZone:M.tz,weekday:'short',hour:'numeric',minute:'numeric',hourCycle:'h23'}).formatToParts(new Date()).forEach(x=>p[x.type]=x.value);const m=+p.hour*60+ +p.minute;return{open:!['Sat','Sun'].includes(p.weekday)&&m>=M.o&&m<=M.c,left:M.c-m}}
 function ticker(){const M=mkt(),keys=[...ALLIDX.map(i=>i[0]),...ST.map(s=>s.s)];
  const rows=keys.map(k=>{const q=LV&&LV.quotes&&LV.quotes[k];let pr,c;if(q){pr=q.p;c=q.c}else{const l=lookup(k);if(!l)return'';pr=l.a[N-1];c=chg(l.a)}return `<span class="ti"><b>${esc(k)}</b> ${fmt(pr)} <span class="${cls(c)}">${c>=0?'▲':'▼'} ${fmt(Math.abs(c))}%</span></span>`}).join('');
- $('#ms').innerHTML=M.open?`<span class="up">●</span> Market OPEN · closes in ${Math.floor(M.left/60)}h ${M.left%60}m`:'<span class="dn">●</span> Market CLOSED · showing last close · opens 9:15 AM IST';
+ $('#ms').innerHTML=M.open?`<span class="up">●</span> Market OPEN · closes in ${Math.floor(M.left/60)}h ${M.left%60}m`:'<span class="dn">●</span> Market CLOSED · showing last close · opens '+MKS[st.m].open;
  if(rows!=tkH){tkH=rows;const tr=$('#tr');tr.innerHTML=rows+rows;tr.style.animationDuration=Math.max(30,tr.scrollWidth/2/60)+'s'}}
-async function refresh(){try{const r=await fetch('live.json',{cache:'no-store'});if(r.ok)LV=await r.json()}catch(e){}
+async function refresh(){const mk=st.m;try{const r=await fetch(PFX+'live.json',{cache:'no-store'});if(r.ok){const j=await r.json();if(mk==st.m)LV=j}}catch(e){}
  ticker();if(st.tab=='Stock Analyzer'&&st.ct=='live')draw();if(st.tab=='Overview')ovList()}
 setInterval(()=>{if(!document.hidden)refresh()},60000);
 function ohlcDaily(k){const R=AG&&AG.ohlc&&AG.ohlc[k];if(R)return R;const l=lookup(k);if(!l)return[];const a=l.a.slice(-120),r=rng(hash(k+'o'));return a.map((c,i)=>{const o=i?a[i-1]:c;return[o,Math.max(o,c)*(1+r()*.01),Math.min(o,c)*(1-r()*.01),c]})}
@@ -280,18 +285,18 @@ function cchart(id,bars,lab){const W=700,H=300,L=52,T=8,B=8,w=W-L-6,hh=H-T-B,n=b
  const c=bars.map((b,i)=>{const col=b[3]>=b[0]?'var(--up)':'var(--dn)';return `<line x1="${X(i)}" x2="${X(i)}" y1="${Y(b[1])}" y2="${Y(b[2])}" stroke="${col}"/><rect x="${X(i)-bw/2}" y="${Y(Math.max(b[0],b[3]))}" width="${bw}" height="${Math.max(1,Math.abs(Y(b[0])-Y(b[3])))}" fill="${col}"/>`}).join('');
  $(id).innerHTML=`<svg viewBox="0 0 ${W} ${H}">${g}${c}</svg><div class="tip"></div>`;
  const svg=$(id+' svg'),tip=$(id+' .tip');svg.onmousemove=e=>{const r=svg.getBoundingClientRect(),i=Math.max(0,Math.min(n-1,Math.floor(((e.clientX-r.left)/r.width*W-L)/w*n))),b=bars[i];tip.style.display='block';tip.style.left=Math.min(r.width-290,Math.max(0,X(i)/W*r.width-100))+'px';tip.style.top='6px';tip.textContent=`${lab(i)} · O ${fmt(b[0])} H ${fmt(b[1])} L ${fmt(b[2])} C ${fmt(b[3])}`};svg.onmouseleave=()=>{tip.style.display='none'}}
-function ctBtns(){st.ct=st.ct||'line';$('#ct').innerHTML=[['line','Line'],['candle','Candles'],['live','Live 15m']].map(([k,l])=>`<button class="btn ${st.ct==k?'':'o'}" data-ct="${k}">${l}</button>`).join('')+(st.ct=='live'?`<span class="nm">${LV?'Updated '+new Date(LV.updated).toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata'})+' IST'+' · about 15 min delayed':'waiting for live data'}</span>`:'')}
+function ctBtns(){st.ct=st.ct||'line';$('#ct').innerHTML=[['line','Line'],['candle','Candles'],['live','Live 15m']].map(([k,l])=>`<button class="btn ${st.ct==k?'':'o'}" data-ct="${k}">${l}</button>`).join('')+(st.ct=='live'?`<span class="nm">${LV?'Updated '+new Date(LV.updated).toLocaleTimeString(LOC,{timeZone:MKS[st.m].tz})+' '+MKS[st.m].tzn+' · about 15 min delayed':'waiting for live data'}</span>`:'')}
 function ctDraw(x){const m=st.ct||'line';if(m=='line')return;
  if(m=='candle'){const b=ohlcDaily(x.s).slice(-Math.min(st.rg,120));cchart('#c2',b,i=>dayLbl(i,b.length));return}
  const R=LV&&LV.intraday&&LV.intraday[x.s];if(!R||!R.length){$('#c2').innerHTML='<div class="card nm">No live data yet. It appears after the market-live workflow has run (every 15 minutes while the market is open).</div>';return}
- cchart('#c2',R.map(r=>r.slice(1)),i=>new Date(R[i][0]*1000).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'}))}
+ cchart('#c2',R.map(r=>r.slice(1)),i=>new Date(R[i][0]*1000).toLocaleString(LOC,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:MKS[st.m].tz}))}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-ct]');if(t){st.ct=t.dataset.ct;draw()}});
 let EX=null,EXs=0;
-async function loadEX(){if(EXs)return;EXs=1;try{const r=await fetch('extra.json',{cache:'no-store'});if(r.ok)EX=await r.json()}catch(e){}EXs=2;if(st.tab=='Metals')mt();if(st.tab=='Mutual Funds')mf();if(st.tab=='Currencies')cu();if(st.tab=='Overview')ovList()}
-const MO=['GOLD_INR','SILVER_INR','GOLD_USD','SILVER_USD','GOLDBEES','SILVERBEES','USDINR'],us=s=>/\$|USD/.test(s.unit)?'$':'₹';
+async function loadEX(){if(EXs)return;EXs=1;const mk=st.m;try{const r=await fetch(PFX+'extra.json',{cache:'no-store'});if(r.ok){const j=await r.json();if(mk==st.m)EX=j}}catch(e){}if(mk!=st.m)return;EXs=2;if(st.tab=='Metals')mt();if(st.tab=='Mutual Funds')mf();if(st.tab=='Currencies')cu();if(st.tab=='Overview')ovList()}
+const MO=['GOLD_INR','SILVER_INR','GOLD_USD','SILVER_USD','GOLDBEES','SILVERBEES','GLD','SLV','USDINR'],us=s=>/^\s*(₹|Rs)/.test(s.unit)?'₹':/^\s*(\$|USD)/.test(s.unit)?'$':'';
 const rgb=(cur,n)=>[[21,'1M'],[63,'3M'],[126,'6M'],[250,'1Y']].map(([k,l])=>`<button class="btn ${cur==Math.min(k,n)?'':'o'}" data-%s="${k}">${l}</button>`).join('');
 const SV={mt:{k:null,r:126,c:'line'},cu:{k:null,r:126,c:'line'}};
-const nodata=(w,k)=>{let m;if(EXs<2)m='Loading…';else if(!EX)m='extra.json was not found next to index.html. Update market_agent.py, run the market-agent workflow, and check that extra.json is in the same folder as index.html in your repo.';else if(EX.errors&&EX.errors[k])m='The agent ran but could not load '+w+' data: '+EX.errors[k]+'. Open the market-agent run log for details.';else m='extra.json has no '+w+' section, which means the market_agent.py on GitHub is an older version. Upload the latest market_agent.py and run the market-agent workflow again.';return `<div class="card">${esc(m)}</div>`};
+const nodata=(w,k)=>{let m;if(EXs<2)m='Loading…';else if(!EX)m=''+PFX+'extra.json was not found next to index.html. Update market_agent.py, run the market-agent workflow, and check that '+PFX+'extra.json is in the same folder as index.html in your repo.';else if(EX.errors&&EX.errors[k])m='The agent ran but could not load '+w+' data: '+EX.errors[k]+'. Open the market-agent run log for details.';else m=''+PFX+'extra.json has no '+w+' section, which means the market_agent.py on GitHub is an older version. Upload the latest market_agent.py and run the market-agent workflow again.';return `<div class="card">${esc(m)}</div>`};
 function srv(kind,M,ks,dec,extra,note){const S=SV[kind];if(!ks.includes(S.k))S.k=ks[0];
  const q=k=>{const c=M[k].c,n=c.length;return{p:c[n-1],ch:n>1?(c[n-1]/c[n-2]-1)*100:0}};
  const s=M[S.k],n=s.c.length,rg=Math.min(S.r,n),ret=d=>n>d?(s.c[n-1]/s.c[n-1-d]-1)*100:null,id='sc'+kind;
@@ -301,22 +306,22 @@ function srv(kind,M,ks,dec,extra,note){const S=SV[kind];if(!ks.includes(S.k))S.k
  if(S.c=='candle')cchart('#'+id,s.d.map((_,i)=>[s.o[i],s.h[i],s.l[i],s.c[i]]).slice(-rg),i=>s.d[n-rg+i]);else chart('#'+id,[{d:s.c,c:'var(--ac)'}],rg,(i,m)=>s.d[n-m+i],us(s))}
 function mt(){loadEX();const M=EX&&EX.metals;if(!M){$('#app').innerHTML=nodata('metals','metals');return}
  const gs=M.GOLD_USD&&M.SILVER_USD?M.GOLD_USD.c.slice(-1)[0]/M.SILVER_USD.c.slice(-1)[0]:null;
- srv('mt',M,MO.filter(k=>M[k]),2,gs?`<div class="card"><div class="nm">Gold / Silver ratio</div><div class="big">${fmt(gs,1)}</div><div class="nm">oz of silver per oz of gold</div></div>`:'','Items marked “indicative” convert international futures (Yahoo Finance) at the day’s USD/INR rate. Indian retail and MCX prices include import duty, GST and premiums, so they will be higher. ETF prices are NSE prices.')}
+ srv('mt',M,MO.filter(k=>M[k]),2,gs?`<div class="card"><div class="nm">Gold / Silver ratio</div><div class="big">${fmt(gs,1)}</div><div class="nm">oz of silver per oz of gold</div></div>`:'',(st.m=='US'?'Gold and silver are COMEX futures prices in USD per troy ounce (Yahoo Finance). GLD and SLV are NYSE-listed ETFs.':'Items marked “indicative” convert international futures (Yahoo Finance) at the day’s USD/INR rate. Indian retail and MCX prices include import duty, GST and premiums, so they will be higher. ETF prices are NSE prices.'))}
 function cu(){loadEX();const M=EX&&EX.fx;if(!M||!Object.keys(M).length){$('#app').innerHTML=nodata('currency','fx');return}
- srv('cu',M,Object.keys(M),3,'','Rates show how many rupees one unit of each currency buys (Japanese yen per 100). Source: Yahoo Finance market rates, which differ from the rates banks and forex desks charge.')}
+ srv('cu',M,Object.keys(M),3,'',(st.m=='US'?'Yahoo Finance market rates against the US dollar. EUR, GBP and AUD are dollars per unit; the others are units per dollar. Bank and card rates differ.':'Rates show how many rupees one unit of each currency buys (Japanese yen per 100). Source: Yahoo Finance market rates, which differ from the rates banks and forex desks charge.'))}
 function mf(){loadEX();const F=EX&&EX.funds;
  if(!F||!F.length){$('#app').innerHTML=nodata('mutual fund','funds');return}
  if(!F.some(x=>x.code==st.fc))st.fc=F[0].code;const f=F.find(x=>x.code==st.fc),n=f.c.length,rg=Math.min(st.frg||250,n),rv=v=>v==null?'—':`<span class="${cls(v)}">${sg(v)}</span>`;
- $('#app').innerHTML=`<div class="card wrap"><table><tr><th>Fund</th><th>Category</th><th class="r">NAV ₹</th><th class="r">1D</th><th class="r">1M</th><th class="r">6M</th><th class="r">1Y</th><th class="r">3Y CAGR</th><th class="r">5Y CAGR</th></tr>${F.map(x=>`<tr class="lk" data-fc="${esc(x.code)}" style="${x.code==f.code?'background:var(--bg)':''}"><td>${esc(x.name)}<div class="nm">${esc(x.house||'')}</div></td><td class="nm">${esc((x.cat||'').replace(/^[A-Za-z]+ Scheme - /,''))}</td><td class="r">${fmt(x.nav,4)}</td><td class="r">${rv(x.chg)}</td>${['1M','6M','1Y','3Y','5Y'].map(k=>`<td class="r">${rv(x.r[k])}</td>`).join('')}</tr>`).join('')}</table></div>
- <h2>${esc(f.name)}</h2><div class="card"><div class="row">${rgb(rg,n).replace(/data-%s/g,'data-fr')}</div><div class="chart" id="fcx"></div><div class="stats"><div><span class="nm">Latest NAV · ${esc(f.date)}</span><b>₹${fmt(f.nav,4)}</b></div><div><span class="nm">High (period)</span><b>₹${fmt(Math.max(...f.c.slice(-rg)),2)}</b></div><div><span class="nm">Low (period)</span><b>₹${fmt(Math.min(...f.c.slice(-rg)),2)}</b></div><div><span class="nm">Period return</span><b class="${cls(f.c[n-1]/f.c[n-rg]-1)}">${sg((f.c[n-1]/f.c[n-rg]-1)*100)}</b></div></div></div>
- <p class="note">NAV data from AMFI via mfapi.in, updated ${new Date(EX.updated).toLocaleString('en-IN')}. Past returns do not guarantee future results. CAGR is annualised. Not investment advice.</p>`;
+ $('#app').innerHTML=`<div class="card wrap"><table><tr><th>Fund</th><th>Category</th><th class="r">NAV ${CUR}</th><th class="r">1D</th><th class="r">1M</th><th class="r">6M</th><th class="r">1Y</th><th class="r">3Y CAGR</th><th class="r">5Y CAGR</th></tr>${F.map(x=>`<tr class="lk" data-fc="${esc(x.code)}" style="${x.code==f.code?'background:var(--bg)':''}"><td>${esc(x.name)}<div class="nm">${esc(x.house||'')}</div></td><td class="nm">${esc((x.cat||'').replace(/^[A-Za-z]+ Scheme - /,''))}</td><td class="r">${fmt(x.nav,4)}</td><td class="r">${rv(x.chg)}</td>${['1M','6M','1Y','3Y','5Y'].map(k=>`<td class="r">${rv(x.r[k])}</td>`).join('')}</tr>`).join('')}</table></div>
+ <h2>${esc(f.name)}</h2><div class="card"><div class="row">${rgb(rg,n).replace(/data-%s/g,'data-fr')}</div><div class="chart" id="fcx"></div><div class="stats"><div><span class="nm">Latest NAV · ${esc(f.date)}</span><b>${CUR}${fmt(f.nav,4)}</b></div><div><span class="nm">High (period)</span><b>${CUR}${fmt(Math.max(...f.c.slice(-rg)),2)}</b></div><div><span class="nm">Low (period)</span><b>${CUR}${fmt(Math.min(...f.c.slice(-rg)),2)}</b></div><div><span class="nm">Period return</span><b class="${cls(f.c[n-1]/f.c[n-rg]-1)}">${sg((f.c[n-1]/f.c[n-rg]-1)*100)}</b></div></div></div>
+ <p class="note">${st.m=='US'?'Fund prices from Yahoo Finance':'NAV data from AMFI via mfapi.in'}, updated ${new Date(EX.updated).toLocaleString('en-IN')}. Past returns do not guarantee future results. CAGR is annualised. Not investment advice.</p>`;
  chart('#fcx',[{d:f.c,c:'var(--ac)'}],rg,(i,m)=>f.d[n-m+i])}
 document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g){const[tb,k]=g.dataset.go.split('|');st.tab=tb;if(tb=='Metals')SV.mt.k=k;else if(tb=='Currencies')SV.cu.k=k;else if(tb=='Mutual Funds')st.fc=k;render();return}
  const v=e.target.closest('[data-sv]');if(v){const[kind,a,val]=v.dataset.sv.split(':'),S=SV[kind];if(a=='k')S.k=val;else if(a=='r')S.r=+val;else S.c=val;({mt:mt,cu:cu})[kind]();return}
  const t=e.target.closest('[data-fc],[data-fr]');if(!t)return;const d=t.dataset;if(d.fc){st.fc=d.fc;mf()}else if(d.fr){st.frg=+d.fr;mf()}});
 let HS=null,HSs=0;
-async function loadHS(){if(HSs)return;HSs=1;try{const r=await fetch('history.json',{cache:'no-store'});if(r.ok)HS=await r.json()}catch(e){}HSs=2;const x=ST.find(s=>s.s==st.sym);if(st.tab=='Stock Analyzer'&&x)hist(x)}
-const vf=v=>!v?'—':v>=1e7?fmt(v/1e7)+' Cr':v>=1e5?fmt(v/1e5)+' L':v.toLocaleString('en-IN');
+async function loadHS(){if(HSs)return;HSs=1;const mk=st.m;try{const r=await fetch(PFX+'history.json',{cache:'no-store'});if(r.ok){const j=await r.json();if(mk==st.m)HS=j}}catch(e){}if(mk!=st.m)return;HSs=2;const x=ST.find(s=>s.s==st.sym);if(st.tab=='Stock Analyzer'&&x)hist(x)}
+const vf=v=>!v?'—':st.m=='US'?(v>=1e9?fmt(v/1e9)+' B':v>=1e6?fmt(v/1e6)+' M':v>=1e3?fmt(v/1e3)+' K':String(v)):v>=1e7?fmt(v/1e7)+' Cr':v>=1e5?fmt(v/1e5)+' L':v.toLocaleString(LOC);
 function histRows(k){
  if(AG&&!AG.demo){const H=HS&&!HS.demo&&HS.stocks&&HS.stocks[k];
   if(H)return{r:H.d.map((d,i)=>({d,o:H.o[i],h:H.h[i],l:H.l[i],c:H.c[i],v:H.v&&H.v.length?H.v[i]:0}))};
@@ -329,7 +334,7 @@ function hist(x){const el=$('#hs');if(!el)return;loadHS();const H=histRows(x.s);
  const R=H.r,n=R.length,pch=i=>i>0?(R[i].c/R[i-1].c-1)*100:0,ret=d=>n>d?(R[n-1].c/R[n-1-d].c-1)*100:null;
  let hi=R[0],lo=R[0],bi=1,wi=1;R.forEach((r,i)=>{if(r.h>hi.h)hi=r;if(r.l<lo.l)lo=r;if(i&&pch(i)>pch(bi))bi=i;if(i&&pch(i)<pch(wi))wi=i});
  const per=[['1W',5],['1M',21],['3M',63],['6M',126],['1Y',249]].map(([l,d])=>{const v=ret(d);return `<div><span class="nm">${l}</span><b class="${v==null?'':cls(v)}">${v==null?'—':sg(v)}</b></div>`}).join('');
- const ex=`<div><span class="nm">High · ${esc(hi.d)}</span><b>₹${fmt(hi.h)}</b></div><div><span class="nm">Low · ${esc(lo.d)}</span><b>₹${fmt(lo.l)}</b></div><div><span class="nm">Best day · ${esc(R[bi].d)}</span><b class="up">${sg(pch(bi))}</b></div><div><span class="nm">Worst day · ${esc(R[wi].d)}</span><b class="dn">${sg(pch(wi))}</b></div>`;
+ const ex=`<div><span class="nm">High · ${esc(hi.d)}</span><b>${CUR}${fmt(hi.h)}</b></div><div><span class="nm">Low · ${esc(lo.d)}</span><b>${CUR}${fmt(lo.l)}</b></div><div><span class="nm">Best day · ${esc(R[bi].d)}</span><b class="up">${sg(pch(bi))}</b></div><div><span class="nm">Worst day · ${esc(R[wi].d)}</span><b class="dn">${sg(pch(wi))}</b></div>`;
  const hr=st.hr||63,rows=[];for(let i=n-1;i>=Math.max(0,n-hr);i--){const r=R[i],c=pch(i);rows.push(`<tr><td>${esc(r.d)}</td><td class="r">${fmt(r.o)}</td><td class="r">${fmt(r.h)}</td><td class="r">${fmt(r.l)}</td><td class="r">${fmt(r.c)}</td><td class="r ${cls(c)}">${i?sg(c):'—'}</td><td class="r">${vf(r.v)}</td></tr>`)}
  el.innerHTML=`<div class="card">${hd}${H.sim?'<div class="nm" style="margin-bottom:8px">Simulated data. Real history appears once the agent has run.</div>':''}<div class="stats" style="margin:0 0 12px">${per}${ex}</div><div class="row">${[[21,'1M'],[63,'3M'],[126,'6M'],[250,'1Y']].map(([k,l])=>`<button class="btn ${hr==k?'':'o'}" data-hr="${k}">${l}</button>`).join('')}<span class="nm">${rows.length} trading days · newest first</span></div><div class="hsc"><table><tr><th>Date</th><th class="r">Open</th><th class="r">High</th><th class="r">Low</th><th class="r">Close</th><th class="r">Change</th><th class="r">Volume</th></tr>${rows.join('')}</table></div></div>`}
 document.addEventListener('click',e=>{const a=e.target.closest('[data-hr]');if(a){st.hr=+a.dataset.hr;const x=ST.find(s=>s.s==st.sym);x&&hist(x);return}
@@ -340,5 +345,18 @@ function animChart(sel){if(RM())return;document.querySelectorAll(sel+' svg path'
 const GC='';   // your GoatCounter code (the part before .goatcounter.com); leave empty to turn the counter off
 if(GC){const s=document.createElement('script');s.async=true;s.src='https://gc.zgo.at/count.js';s.dataset.goatcounter='https://'+GC+'.goatcounter.com/count';document.head.appendChild(s);
  fetch('https://'+GC+'.goatcounter.com/counter/TOTAL.json').then(r=>r.json()).then(d=>{$('#hits').textContent='👁 '+d.count+' total page views'}).catch(()=>{})}
-fetch('data.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{if(d&&d.stocks){Object.assign(REAL,d.stocks,d.indices||{});AG=d}}).catch(()=>{}).then(()=>{banner();render();refresh()});
+const MKS={IN:{title:'Bharat Market Analyzer',sub:'NSE (Nifty) &amp; BSE (Sensex) trend dashboards',cur:'₹',loc:'en-IN',pfx:'',tz:'Asia/Kolkata',tzn:'IST',o:555,c:930,open:'9:15 AM IST',x:'NSE',sym:'RELIANCE',wl:['TCS','HDFCBANK','ITC']},
+ US:{title:'US Market Analyzer',sub:'S&amp;P 500, Nasdaq &amp; Dow trend dashboards',cur:'$',loc:'en-US',pfx:'us_',tz:'America/New_York',tzn:'ET',o:570,c:960,open:'9:30 AM ET',x:'US',sym:'AAPL',wl:['MSFT','NVDA','JPM']}};
+let LT=0;
+function loadAll(){const tk=++LT;fetch(PFX+'data.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{if(tk==LT&&d&&d.stocks){Object.assign(REAL,d.stocks,d.indices||{});AG=d}}).catch(()=>{}).then(()=>{if(tk!=LT)return;banner();render();refresh()})}
+function setMarket(m,boot){st.m=m;const M=MKS[m];CUR=M.cur;LOC=M.loc;PFX=M.pfx;try{localStorage.setItem('mk',m)}catch(e){}
+ ST=m=='US'?ST_US:ST_IN;ALLIDX=m=='US'?IDX.US:[...IDX.NSE,...IDX.BSE];
+ Object.keys(cache).forEach(k=>delete cache[k]);Object.keys(REAL).forEach(k=>delete REAL[k]);AG=null;LV=null;HS=null;HSs=0;EX=null;EXs=0;tkH='';
+ try{JSON.parse(localStorage.getItem(K('cs'))||'[]').forEach(([s,n,sec,p])=>{if(!ST.some(x=>x.s==s))ST.push(mkStock(s,n,sec,p))})}catch(e){}
+ try{st.wl=JSON.parse(localStorage.getItem(K('wl'))||'[]')}catch(e){st.wl=[]}if(!st.wl.length)st.wl=[...M.wl];
+ st.x=M.x;st.sym=M.sym;st.idx=0;st.ed=null;$('#ex').style.display=m=='US'?'none':'';
+ document.querySelectorAll('#mk button').forEach(b=>b.classList.toggle('on',b.dataset.m==m));$('h1 small').innerHTML=M.sub;
+ if(!boot){banner();render()}loadAll()}
+document.addEventListener('click',e=>{const b=e.target.closest('#mk [data-m]');if(b&&b.dataset.m!=st.m){st.enter=true;setMarket(b.dataset.m)}});
+try{setMarket(localStorage.getItem('mk')==='US'?'US':'IN',true)}catch(e){setMarket('IN',true)}
 </script></body></html>
