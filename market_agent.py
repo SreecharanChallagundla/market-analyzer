@@ -287,11 +287,14 @@ def update_extra():
     path = os.path.join(DOCS_DIR, "extra.json")
     try: old = json.load(open(path))
     except Exception: old = {}
-    new = {}
+    new, errs = {}, {}
     try: new["metals"] = fetch_metals()
-    except Exception as e: print(f"Metals unavailable: {e}")
-    try: new["fx"] = fetch_fx()
-    except Exception as e: print(f"Currencies unavailable: {e}")
+    except Exception as e: errs["metals"] = str(e)[:120]; print(f"Metals unavailable: {e}")
+    try:
+        fx = fetch_fx()
+        if fx: new["fx"] = fx
+        else: errs["fx"] = "Yahoo Finance returned no data for any currency pair"
+    except Exception as e: errs["fx"] = str(e)[:120]; print(f"Currencies unavailable: {e}")
     funds = []
     for entry in FUNDS:
         try:
@@ -300,8 +303,9 @@ def update_extra():
             funds.append(_mf_fetch(code))
         except Exception as e: print(f"Fund '{entry}' failed: {e}")
     if funds: new["funds"] = funds
-    if new:
-        old.update(new); old["updated"] = dt.datetime.now(IST).isoformat(timespec="minutes")
+    else: errs["funds"] = "no fund could be loaded from mfapi.in (check names or use scheme codes in config.json)"
+    if new or errs:
+        old.update(new); old["errors"] = errs; old["updated"] = dt.datetime.now(IST).isoformat(timespec="minutes")
         os.makedirs(DOCS_DIR, exist_ok=True)
         with open(path, "w") as f: json.dump(old, f, separators=(",", ":"))
         print(f"extra.json written: {len(new.get('metals', {}))} metal series, {len(funds)} funds")
