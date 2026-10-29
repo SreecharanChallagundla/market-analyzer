@@ -1,0 +1,48 @@
+name: market-agent-us
+
+on:
+  schedule:
+    - cron: "30 14,16,18,20,22 * * 1-5"   # US session, every 2 hours (covers EST and EDT), Mon-Fri
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}   # one run at a time per workflow
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run agent
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}       # optional
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}   # optional
+        run: python market_agent.py --once --market US
+
+      - name: Publish data for the dashboard
+        run: |
+          git config user.name "market-agent"
+          git config user.email "actions@users.noreply.github.com"
+          for f in *.json docs/*.json; do [ -f "$f" ] && git add "$f"; done; true
+          if git diff --cached --quiet; then echo "No data changes to commit"; exit 0; fi
+          git commit -m "Update market data"
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            if git rebase -X theirs origin/main && git push origin HEAD:main; then echo "Pushed"; exit 0; fi
+            echo "Push attempt $i failed, retrying..."; git rebase --abort 2>/dev/null || true; sleep $((RANDOM % 10 + 5))
+          done
+          echo "Could not push after 5 attempts"; exit 1
