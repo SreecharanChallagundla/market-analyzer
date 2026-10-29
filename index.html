@@ -80,7 +80,7 @@ if(!st.wl.length)st.wl=['TCS','HDFCBANK','ITC'];
 const saveWL=()=>{try{localStorage.setItem('wl',JSON.stringify(st.wl))}catch(e){}};
 function spark(a,w=180,h=44){const mn=Math.min(...a),mx=Math.max(...a),p=a.map((v,i)=>(i/(a.length-1)*w).toFixed(1)+','+(h-2-(v-mn)/(mx-mn||1)*(h-4)).toFixed(1));
  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:44px"><polyline pathLength="1" fill="none" stroke="var(${a[a.length-1]>=a[0]?'--up':'--dn'})" stroke-width="1.6" points="${p.join(' ')}"/></svg>`}
-function chart(id,ser,n,labels){const W=700,H=280,L=52,B=8,T=8,w=W-L-6,h=H-T-B;
+function chart(id,ser,n,labels,u='₹'){const W=700,H=280,L=52,B=8,T=8,w=W-L-6,h=H-T-B;
  const sl=a=>a.slice(-n),all=ser.flatMap(s=>sl(s.d).filter(v=>v!=null)),mn=Math.min(...all),mx=Math.max(...all);
  const X=i=>L+i/(n-1)*w,Y=v=>T+(1-(v-mn)/(mx-mn||1))*h;
  let g='';for(let k=0;k<=4;k++){const v=mn+(mx-mn)*k/4,y=Y(v);g+=`<line x1="${L}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--bd)"/><text x="${L-6}" y="${y+4}" text-anchor="end" font-size="11" fill="var(--mu)">${fmt(v,0)}</text>`}
@@ -91,10 +91,10 @@ function chart(id,ser,n,labels){const W=700,H=280,L=52,B=8,T=8,w=W-L-6,h=H-T-B;
  svg.onmousemove=e=>{const r=svg.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,i=Math.max(0,Math.min(n-1,Math.round((x-L)/w*(n-1))));
   cx.setAttribute('x1',X(i));cx.setAttribute('x2',X(i));cx.setAttribute('opacity',1);
   tip.style.display='block';tip.style.left=Math.min(r.width-150,Math.max(0,X(i)/W*r.width-60))+'px';tip.style.top='6px';
-  tip.textContent=`${labels(i,n)} · ₹${fmt(m[i])}`};
+  tip.textContent=`${labels(i,n)} · ${u}${fmt(m[i])}`};
  svg.onmouseleave=()=>{tip.style.display='none';cx.setAttribute('opacity',0)}}
 const dayLbl=(i,n)=>{const d=new Date(2026,9,26);d.setDate(d.getDate()-Math.round((n-1-i)*1.46));return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'})};
-const BT=['Overview','Stock Analyzer','Sectors','Movers & Watchlist','PCR','Agent Signals','My Stocks'];
+const BT=['Overview','Stock Analyzer','Sectors','Movers & Watchlist','Mutual Funds','Metals','Agent Signals','My Stocks'];
 let CFG={name:'',hidden:[],tabs:[]};
 try{const c=JSON.parse(localStorage.getItem('cfg')||'null');if(c)CFG=Object.assign(CFG,c)}catch(e){}
 const saveCFG=()=>{try{localStorage.setItem('cfg',JSON.stringify(CFG))}catch(e){}};
@@ -107,7 +107,7 @@ function render(){
  const nm=CFG.name.trim();$('h1').firstChild.nodeValue=nm?nm+'’s Market Dashboard':'Bharat Market Analyzer';document.title=nm?nm+'’s Market Dashboard':'Bharat Market Analyzer';
  $('#tabs').innerHTML=all.map(t=>`<button class="${t.k==st.tab?'on':''}" data-t="${esc(t.k)}">${esc(t.n)}</button>`).join('')+'<button data-a="new" title="Add your own tab">＋</button>';
  $('#ex').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.x==st.x));
- st.enter=st.tab=='Overview';const f=({Overview:ov,'Stock Analyzer':an,Sectors:sec,'Movers & Watchlist':mv,PCR:pc,'Agent Signals':ag,'My Stocks':ms,Customize:cz})[st.tab];
+ st.enter=st.tab=='Overview';const f=({Overview:ov,'Stock Analyzer':an,Sectors:sec,'Movers & Watchlist':mv,'Mutual Funds':mf,Metals:mt,'Agent Signals':ag,'My Stocks':ms,Customize:cz})[st.tab];
  f?f():(()=>{const t=CFG.tabs.find(t=>'c:'+t.id==st.tab);t&&t.lock&&CFG.pin&&!st.unl?lk(t):cv(t)})()}
 function cv(t){if(!t)return;const rows=t.items.map(k=>({k,...lookup(k)})).filter(r=>r.a);
  const head=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(t.name)}</h2><span>${t.lock&&CFG.pin?'<button class="btn o" data-a="lockNow">🔒 Lock now</button> ':''}<button class="btn o" data-a="edit" data-id="${t.id}">Edit tab</button></span></div>`;
@@ -255,14 +255,14 @@ document.addEventListener('click',async e=>{const t=e.target.closest('[data-a]')
    const r=await gh('/gists/'+id),c=r.files['dashboard.json'];applyBk(JSON.parse(c.truncated?await (await fetch(c.raw_url)).text():c.content));render();setTimeout(()=>{const m=$('#sm');m&&(m.textContent='Loaded from cloud.')},0)}
  }catch(err){sm.textContent='Failed: '+err.message}});
 document.addEventListener('change',e=>{if(e.target.id!='bf')return;const f=e.target.files[0];if(!f)return;if(CFG.pin&&!st.unl){alert('Unlock first: Customize → Privacy.');e.target.value='';return}const r=new FileReader();r.onload=()=>{try{applyBk(JSON.parse(r.result));render();alert('Backup restored.')}catch(err){alert('That file could not be read.')}};r.readAsText(f)});
-let LV=null,PC=null,tkH='';
+let LV=null,tkH='';
 function mkt(){const p={};new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Kolkata',weekday:'short',hour:'numeric',minute:'numeric',hourCycle:'h23'}).formatToParts(new Date()).forEach(x=>p[x.type]=x.value);const m=+p.hour*60+ +p.minute;return{open:!['Sat','Sun'].includes(p.weekday)&&m>=555&&m<=930,left:930-m}}
 function ticker(){const M=mkt(),keys=[...ALLIDX.map(i=>i[0]),...ST.map(s=>s.s)];
  const rows=keys.map(k=>{const q=LV&&LV.quotes&&LV.quotes[k];let pr,c;if(q){pr=q.p;c=q.c}else{const l=lookup(k);if(!l)return'';pr=l.a[N-1];c=chg(l.a)}return `<span class="ti"><b>${esc(k)}</b> ${fmt(pr)} <span class="${cls(c)}">${c>=0?'▲':'▼'} ${fmt(Math.abs(c))}%</span></span>`}).join('');
  $('#ms').innerHTML=M.open?`<span class="up">●</span> Market OPEN · closes in ${Math.floor(M.left/60)}h ${M.left%60}m`:'<span class="dn">●</span> Market CLOSED · showing last close · opens 9:15 AM IST';
  if(rows!=tkH){tkH=rows;const tr=$('#tr');tr.innerHTML=rows+rows;tr.style.animationDuration=Math.max(30,tr.scrollWidth/2/60)+'s'}}
-async function refresh(){try{const[a,b]=await Promise.all(['live.json','pcr.json'].map(u=>fetch(u,{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null)));if(a)LV=a;if(b)PC=b}catch(e){}
- ticker();if(st.tab=='Stock Analyzer'&&st.ct=='live')draw();if(st.tab=='PCR')pc();if(st.tab=='Overview')ovList()}
+async function refresh(){try{const r=await fetch('live.json',{cache:'no-store'});if(r.ok)LV=await r.json()}catch(e){}
+ ticker();if(st.tab=='Stock Analyzer'&&st.ct=='live')draw();if(st.tab=='Overview')ovList()}
 setInterval(()=>{if(!document.hidden)refresh()},60000);
 function ohlcDaily(k){const R=AG&&AG.ohlc&&AG.ohlc[k];if(R)return R;const l=lookup(k);if(!l)return[];const a=l.a.slice(-120),r=rng(hash(k+'o'));return a.map((c,i)=>{const o=i?a[i-1]:c;return[o,Math.max(o,c)*(1+r()*.01),Math.min(o,c)*(1-r()*.01),c]})}
 function cchart(id,bars,lab){const W=700,H=300,L=52,T=8,B=8,w=W-L-6,hh=H-T-B,n=bars.length,mn=Math.min(...bars.map(b=>b[2])),mx=Math.max(...bars.map(b=>b[1])),X=i=>L+(i+.5)/n*w,Y=v=>T+(1-(v-mn)/(mx-mn||1))*hh,bw=Math.max(1.5,w/n*.65);
@@ -276,11 +276,27 @@ function ctDraw(x){const m=st.ct||'line';if(m=='line')return;
  const R=LV&&LV.intraday&&LV.intraday[x.s];if(!R||!R.length){$('#c2').innerHTML='<div class="card nm">No live data yet. It appears after the market-live workflow has run (every 15 minutes while the market is open).</div>';return}
  cchart('#c2',R.map(r=>r.slice(1)),i=>new Date(R[i][0]*1000).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'}))}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-ct]');if(t){st.ct=t.dataset.ct;draw()}});
-const plab=v=>v<0.7?'Call-heavy · cautious':v>1.2?'Put-heavy · supportive':'Neutral';
-function pc(){const ks=PC?Object.keys(PC).filter(k=>PC[k].length):[];
- if(!ks.length){$('#app').innerHTML='<div class="card">No PCR data yet. The agent records it once per run, and NSE sometimes blocks cloud servers, so it may stay empty. Look for “PCR” lines in the Actions log.</div>';return}
- $('#app').innerHTML=`<div class="cols">${ks.map(k=>{const hh=PC[k],e=hh[hh.length-1],pv=hh[hh.length-2];return `<div class="card"><div class="nm">${esc(k)} · Put-Call Ratio (open interest)</div><div class="big">${fmt(e.all)}</div><div>${plab(e.all)}${pv?` · <span class="${cls(e.all-pv.all)}">${e.all-pv.all>=0?'▲':'▼'} ${fmt(Math.abs(e.all-pv.all))}</span> vs ${esc(pv.d)}`:''}</div><div class="nm">Nearest expiry ${e.exp?esc(e.exp):''}: <b>${fmt(e.near)}</b></div>${hh.length>1?spark(hh.map(x=>x.all),300,60):''}<div class="wrap"><table><tr><th>Date</th><th class="r">PCR</th><th class="r">Near expiry</th></tr>${hh.slice(-10).reverse().map(x=>`<tr><td>${esc(x.d)}</td><td class="r">${fmt(x.all)}</td><td class="r">${fmt(x.near)}</td></tr>`).join('')}</table></div></div>`}).join('')}</div><p class="note">PCR = total put open interest ÷ total call open interest. One value is stored per trading day (the latest run of the day). It is context, not a signal: conventions differ and the same reading can be interpreted either way.</p>`}
-document.getElementById('yr').textContent=new Date().getFullYear();
+let EX=null,EXs=0;
+async function loadEX(){if(EXs)return;EXs=1;try{const r=await fetch('extra.json',{cache:'no-store'});if(r.ok)EX=await r.json()}catch(e){}EXs=2;if(st.tab=='Metals')mt();if(st.tab=='Mutual Funds')mf()}
+const MO=['GOLD_INR','SILVER_INR','GOLD_USD','SILVER_USD','GOLDBEES','SILVERBEES','USDINR'],us=s=>/\$|USD/.test(s.unit)?'$':'₹';
+const rgb=(cur,n)=>[[21,'1M'],[63,'3M'],[126,'6M'],[250,'1Y']].map(([k,l])=>`<button class="btn ${cur==Math.min(k,n)?'':'o'}" data-%s="${k}">${l}</button>`).join('');
+function mt(){loadEX();const M=EX&&EX.metals;
+ if(!M){$('#app').innerHTML=`<div class="card">${EXs<2?'Loading…':'No metals data yet. Update market_agent.py, run the market-agent workflow, and keep extra.json in the same folder as index.html.'}</div>`;return}
+ const ks=MO.filter(k=>M[k]);if(!ks.includes(st.mk))st.mk=ks[0];const q=k=>{const c=M[k].c,n=c.length;return{p:c[n-1],ch:n>1?(c[n-1]/c[n-2]-1)*100:0}};
+ const s=M[st.mk],n=s.c.length,rg=Math.min(st.mrg||126,n),ct=st.mct||'line',gs=M.GOLD_USD&&M.SILVER_USD?M.GOLD_USD.c.slice(-1)[0]/M.SILVER_USD.c.slice(-1)[0]:null,ret=d=>n>d?(s.c[n-1]/s.c[n-1-d]-1)*100:null;
+ $('#app').innerHTML=`<div class="grid">${ks.map(k=>{const z=q(k);return `<div class="card click ${k==st.mk?'sel':''}" data-mk="${k}"><div class="nm">${esc(M[k].name)} · ${esc(M[k].unit)}</div><div class="big">${fmt(z.p)}</div><div class="${cls(z.ch)}">${sg(z.ch)} <span class="nm">1D</span></div>${spark(M[k].c.slice(-60))}</div>`}).join('')}${gs?`<div class="card"><div class="nm">Gold / Silver ratio</div><div class="big">${fmt(gs,1)}</div><div class="nm">oz of silver per oz of gold</div></div>`:''}</div>
+ <h2>${esc(s.name)} · ${esc(s.unit)}</h2><div class="card"><div class="row">${[['line','Line'],['candle','Candles']].map(([k,l])=>`<button class="btn ${ct==k?'':'o'}" data-mc="${k}">${l}</button>`).join('')}${rgb(rg,n).replace(/data-%s/g,'data-mr')}</div><div class="chart" id="mc"></div><div class="stats">${[['1W',ret(5)],['1M',ret(21)],['3M',ret(63)],['6M',ret(126)],['1Y',ret(249)]].map(([l,v])=>`<div><span class="nm">${l}</span><b class="${v==null?'':cls(v)}">${v==null?'—':sg(v)}</b></div>`).join('')}<div><span class="nm">High</span><b>${fmt(Math.max(...s.h))}</b></div><div><span class="nm">Low</span><b>${fmt(Math.min(...s.l))}</b></div></div></div>
+ <p class="note">Updated ${new Date(EX.updated).toLocaleString('en-IN')}. Items marked “indicative” convert international futures (Yahoo Finance) at the day’s USD/INR rate. Indian retail and MCX prices include import duty, GST and premiums, so they will be higher. ETF prices are NSE prices. Not investment advice.</p>`;
+ if(ct=='candle')cchart('#mc',s.d.map((_,i)=>[s.o[i],s.h[i],s.l[i],s.c[i]]).slice(-rg),i=>s.d[n-rg+i]);else chart('#mc',[{d:s.c,c:'var(--ac)'}],rg,(i,m)=>s.d[n-m+i],us(s))}
+function mf(){loadEX();const F=EX&&EX.funds;
+ if(!F||!F.length){$('#app').innerHTML=`<div class="card">${EXs<2?'Loading…':'No mutual fund data yet. Run the market-agent workflow. Choose funds in the “funds” list of config.json. Keep extra.json in the same folder as index.html.'}</div>`;return}
+ if(!F.some(x=>x.code==st.fc))st.fc=F[0].code;const f=F.find(x=>x.code==st.fc),n=f.c.length,rg=Math.min(st.frg||250,n),rv=v=>v==null?'—':`<span class="${cls(v)}">${sg(v)}</span>`;
+ $('#app').innerHTML=`<div class="card wrap"><table><tr><th>Fund</th><th>Category</th><th class="r">NAV ₹</th><th class="r">1D</th><th class="r">1M</th><th class="r">6M</th><th class="r">1Y</th><th class="r">3Y CAGR</th><th class="r">5Y CAGR</th></tr>${F.map(x=>`<tr class="lk" data-fc="${esc(x.code)}" style="${x.code==f.code?'background:var(--bg)':''}"><td>${esc(x.name)}<div class="nm">${esc(x.house||'')}</div></td><td class="nm">${esc((x.cat||'').replace(/^[A-Za-z]+ Scheme - /,''))}</td><td class="r">${fmt(x.nav,4)}</td><td class="r">${rv(x.chg)}</td>${['1M','6M','1Y','3Y','5Y'].map(k=>`<td class="r">${rv(x.r[k])}</td>`).join('')}</tr>`).join('')}</table></div>
+ <h2>${esc(f.name)}</h2><div class="card"><div class="row">${rgb(rg,n).replace(/data-%s/g,'data-fr')}</div><div class="chart" id="fcx"></div><div class="stats"><div><span class="nm">Latest NAV · ${esc(f.date)}</span><b>₹${fmt(f.nav,4)}</b></div><div><span class="nm">High (period)</span><b>₹${fmt(Math.max(...f.c.slice(-rg)),2)}</b></div><div><span class="nm">Low (period)</span><b>₹${fmt(Math.min(...f.c.slice(-rg)),2)}</b></div><div><span class="nm">Period return</span><b class="${cls(f.c[n-1]/f.c[n-rg]-1)}">${sg((f.c[n-1]/f.c[n-rg]-1)*100)}</b></div></div></div>
+ <p class="note">NAV data from AMFI via mfapi.in, updated ${new Date(EX.updated).toLocaleString('en-IN')}. Past returns do not guarantee future results. CAGR is annualised. Not investment advice.</p>`;
+ chart('#fcx',[{d:f.c,c:'var(--ac)'}],rg,(i,m)=>f.d[n-m+i])}
+document.addEventListener('click',e=>{const t=e.target.closest('[data-mk],[data-mr],[data-mc],[data-fc],[data-fr]');if(!t)return;const d=t.dataset;
+ if(d.mk){st.mk=d.mk;mt()}else if(d.mr){st.mrg=+d.mr;mt()}else if(d.mc){st.mct=d.mc;mt()}else if(d.fc){st.fc=d.fc;mf()}else if(d.fr){st.frg=+d.fr;mf()}});
 let HS=null,HSs=0;
 async function loadHS(){if(HSs)return;HSs=1;try{const r=await fetch('history.json',{cache:'no-store'});if(r.ok)HS=await r.json()}catch(e){}HSs=2;const x=ST.find(s=>s.s==st.sym);if(st.tab=='Stock Analyzer'&&x)hist(x)}
 const vf=v=>!v?'—':v>=1e7?fmt(v/1e7)+' Cr':v>=1e5?fmt(v/1e5)+' L':v.toLocaleString('en-IN');
