@@ -45,7 +45,9 @@ input[type=checkbox]{min-width:0;padding:0}.picks{display:grid;grid-template-col
 .enter #br>div>div:first-child{transform-origin:left;animation:gr 1.1s .8s cubic-bezier(.2,.7,.2,1) backwards}
 .card.click{transition:transform .2s,box-shadow .2s,border-color .2s}.card.click:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(0,0,0,.14)}
 #ms .up,.lv{display:inline-block;animation:pl 1.6s ease-in-out infinite}.ar{display:inline-block}.vr .up .ar{animation:bu 1.2s ease-in-out infinite}.vr .dn .ar{animation:bd 1.2s ease-in-out infinite}.vr{transition:background .2s,padding-left .2s}.vr:hover{padding-left:19px}}
-.vm{-webkit-mask-image:linear-gradient(transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(transparent,#000 7%,#000 93%,transparent)}</style></head><body>
+.vm{-webkit-mask-image:linear-gradient(transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(transparent,#000 7%,#000 93%,transparent)}html,body{height:100%}body{height:100dvh;display:flex;flex-direction:column;overflow:hidden}header,#tk,.tabs,#bn,#hits,footer{flex:none}
+main{flex:1;min-height:0;overflow:auto;max-width:none;margin:0;padding:16px max(18px,calc((100% - 1150px)/2))}
+#hits{margin:0!important;padding:2px 0}footer{padding:8px 18px!important}aside#ovr{position:static}</style></head><body>
 <header><div class="brand"><h1>Bharat Market Analyzer<small>NSE (Nifty) &amp; BSE (Sensex) trend dashboards</small></h1></div>
 <div class="seg" id="ex"><button data-x="NSE" class="on">NSE · Nifty</button><button data-x="BSE">BSE · Sensex</button></div></header>
 <div id="tk"><span class="st" id="ms"></span><div style="overflow:hidden;flex:1;min-width:0"><div class="tr" id="tr"></div></div></div>
@@ -94,7 +96,7 @@ function chart(id,ser,n,labels,u='₹'){const W=700,H=280,L=52,B=8,T=8,w=W-L-6,h
   tip.textContent=`${labels(i,n)} · ${u}${fmt(m[i])}`};
  svg.onmouseleave=()=>{tip.style.display='none';cx.setAttribute('opacity',0)}}
 const dayLbl=(i,n)=>{const d=new Date(2026,9,26);d.setDate(d.getDate()-Math.round((n-1-i)*1.46));return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'})};
-const BT=['Overview','Stock Analyzer','Sectors','Movers & Watchlist','Mutual Funds','Metals','Agent Signals','My Stocks'];
+const BT=['Overview','Stock Analyzer','Sectors','Movers & Watchlist','Mutual Funds','Metals','Currencies','Agent Signals','My Stocks'];
 let CFG={name:'',hidden:[],tabs:[]};
 try{const c=JSON.parse(localStorage.getItem('cfg')||'null');if(c)CFG=Object.assign(CFG,c)}catch(e){}
 const saveCFG=()=>{try{localStorage.setItem('cfg',JSON.stringify(CFG))}catch(e){}};
@@ -107,7 +109,7 @@ function render(){
  const nm=CFG.name.trim();$('h1').firstChild.nodeValue=nm?nm+'’s Market Dashboard':'Bharat Market Analyzer';document.title=nm?nm+'’s Market Dashboard':'Bharat Market Analyzer';
  $('#tabs').innerHTML=all.map(t=>`<button class="${t.k==st.tab?'on':''}" data-t="${esc(t.k)}">${esc(t.n)}</button>`).join('')+'<button data-a="new" title="Add your own tab">＋</button>';
  $('#ex').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.x==st.x));
- st.enter=st.tab=='Overview';const f=({Overview:ov,'Stock Analyzer':an,Sectors:sec,'Movers & Watchlist':mv,'Mutual Funds':mf,Metals:mt,'Agent Signals':ag,'My Stocks':ms,Customize:cz})[st.tab];
+ st.enter=st.tab=='Overview';const f=({Overview:ov,'Stock Analyzer':an,Sectors:sec,'Movers & Watchlist':mv,'Mutual Funds':mf,Metals:mt,Currencies:cu,'Agent Signals':ag,'My Stocks':ms,Customize:cz})[st.tab];
  f?f():(()=>{const t=CFG.tabs.find(t=>'c:'+t.id==st.tab);t&&t.lock&&CFG.pin&&!st.unl?lk(t):cv(t)})()}
 function cv(t){if(!t)return;const rows=t.items.map(k=>({k,...lookup(k)})).filter(r=>r.a);
  const head=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(t.name)}</h2><span>${t.lock&&CFG.pin?'<button class="btn o" data-a="lockNow">🔒 Lock now</button> ':''}<button class="btn o" data-a="edit" data-id="${t.id}">Edit tab</button></span></div>`;
@@ -165,11 +167,19 @@ function ov0(en){const L=IDX[st.x];if(st.idx>=L.length)st.idx=0;
  const up=ST.filter(s=>chg(S(s))>=0).length;$('#br').innerHTML=`<div style="display:flex;height:14px;border-radius:7px;overflow:hidden"><div style="width:${up/ST.length*100}%;background:var(--up)"></div><div style="flex:1;background:var(--dn)"></div></div><div class="row" style="margin:8px 0 0"><span class="up">${up} advancing</span><span class="dn">${ST.length-up} declining</span></div>`}
 function rangeBtns(){$('#rg').innerHTML=[[21,'1M'],[63,'3M'],[126,'6M'],[250,'1Y']].map(([n,l])=>`<button class="btn ${n==st.rg?'':'o'}" data-r="${n}">${l}</button>`).join('')}
 const qt=k=>{const q=LV&&LV.quotes&&LV.quotes[k];if(q)return{p:q.p,c:q.c};const l=lookup(k);return l?{p:l.a[N-1],c:chg(l.a)}:null};
-function ovList(){const el=$('#ovr');if(!el)return;
- const rows=ST.map(x=>{const q=qt(x.s);if(!q)return'';return `<div class="vr" data-s="${esc(x.s)}"><div><b>${esc(x.s)}</b><div class="nm">${esc(x.n)}${st.x=='BSE'&&x.b&&x.b!='—'?' · BSE '+x.b:''}</div></div><div style="text-align:right"><div>₹${fmt(q.p)}</div><div class="${cls(q.c)}"><span class="ar">${q.c>=0?'▲':'▼'}</span> ${fmt(Math.abs(q.c))}%</div></div></div>`}).join('');
- if(el.dataset.h===rows)return;el.dataset.h=rows;
- el.innerHTML=`<div class="card" style="padding:0"><div style="padding:10px 13px;border-bottom:1px solid var(--bd)"><b>All stocks</b> ${mkt().open?'<span class="up lv">●</span>':''} <span class="nm">· ${ST.length} · hover to pause, click to analyze</span></div><div class="vm"><div class="vt">${rows}${rows}</div></div></div>`;
- const vt=el.querySelector('.vt');vt.style.animationDuration=Math.max(25,vt.scrollHeight/2/30)+'s'}
+const sh=s=>String(s||'').replace(/\s*-\s*(Direct|Regular).*$/i,'').replace(/\s+(Direct|Regular).*$/i,'');
+const wrow=(at,name,sub,price,c)=>`<div class="vr" ${at}><div style="min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(name)}</b><div class="nm">${esc(sub)}</div></div><div style="text-align:right;flex:none"><div>${price}</div><div class="${cls(c)}"><span class="ar">${c>=0?'▲':'▼'}</span> ${fmt(Math.abs(c))}%</div></div></div>`;
+function ovW(title,list,h,hint,live){const body=list.length?`<div class="vm" style="height:${h}px;min-height:0"><div class="vt">${list.join('').repeat(2*Math.max(1,Math.ceil((h+60)/(list.length*42))))}</div></div>`:`<div class="nm" style="padding:14px 13px">${EXs<2?'Loading…':'No data yet. Run the market-agent workflow.'}</div>`;
+ return `<div class="card" style="padding:0;margin-bottom:12px"><div style="padding:10px 13px;border-bottom:1px solid var(--bd)"><b>${title}</b> ${live?'<span class="up lv">●</span> ':''}<span class="nm">${hint}</span></div>${body}</div>`}
+function ovList(){const el=$('#ovr');if(!el)return;loadEX();
+ const last=s=>{const c=s.c,n=c.length;return{p:c[n-1],c:n>1?(c[n-1]/c[n-2]-1)*100:0}};
+ const sk=ST.map(x=>{const q=qt(x.s);return q?wrow(`data-s="${esc(x.s)}"`,x.s,x.n+(st.x=='BSE'&&x.b&&x.b!='—'?' · BSE '+x.b:''),'₹'+fmt(q.p),q.c):''}).filter(Boolean);
+ const fd=((EX&&EX.funds)||[]).map(f=>wrow(`data-go="Mutual Funds|${esc(f.code)}"`,sh(f.name),(f.cat||'').replace(/^[A-Za-z]+ Scheme - /,''),'₹'+fmt(f.nav),f.chg));
+ const M=(EX&&EX.metals)||{},mm=MO.filter(k=>M[k]&&k!='USDINR').map(k=>{const z=last(M[k]);return wrow(`data-go="Metals|${k}"`,M[k].name,M[k].unit,fmt(z.p),z.c)});
+ const X=(EX&&EX.fx)||{},cc=Object.keys(X).map(k=>{const z=last(X[k]);return wrow(`data-go="Currencies|${k}"`,X[k].name,X[k].unit,fmt(z.p,3),z.c)});
+ const key=[sk,fd,mm,cc].map(a=>a.join('')).join('|')+mkt().open;if(el.dataset.h===key)return;el.dataset.h=key;
+ el.innerHTML=ovW(`All stocks <span class="nm">· ${sk.length}</span>`,sk,Math.max(220,Math.min(340,innerHeight-400)),'hover to pause · click to analyze',mkt().open)+ovW('Mutual funds',fd,200,'click to open')+ovW('Metals',mm,200,'gold &amp; silver')+ovW('Currencies vs ₹',cc,200,'click to open');
+ el.querySelectorAll('.vt').forEach(vt=>{vt.style.animationDuration=Math.max(18,vt.scrollHeight/2/30)+'s'})}
 const cr=v=>fmt(v/1e7,0);
 function side(x){const R=AG&&!AG.demo&&AG.reports&&AG.reports[x.s],el=$('#side');
  if(!R){el.innerHTML=`<div class="card"><h2 style="margin:0 0 6px">Report · ${esc(x.s)}</h2><div class="nm">${!AG||AG.demo?'Reports appear after the first agent run on GitHub.':!AG.reports?'The agent data has no reports yet. Update market_agent.py on GitHub to the latest version, then run the workflow again.':'This stock is not covered by the agent. Add its symbol to the watchlist in config.json to get reports.'}</div></div>`;return}
@@ -277,17 +287,23 @@ function ctDraw(x){const m=st.ct||'line';if(m=='line')return;
  cchart('#c2',R.map(r=>r.slice(1)),i=>new Date(R[i][0]*1000).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'}))}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-ct]');if(t){st.ct=t.dataset.ct;draw()}});
 let EX=null,EXs=0;
-async function loadEX(){if(EXs)return;EXs=1;try{const r=await fetch('extra.json',{cache:'no-store'});if(r.ok)EX=await r.json()}catch(e){}EXs=2;if(st.tab=='Metals')mt();if(st.tab=='Mutual Funds')mf()}
+async function loadEX(){if(EXs)return;EXs=1;try{const r=await fetch('extra.json',{cache:'no-store'});if(r.ok)EX=await r.json()}catch(e){}EXs=2;if(st.tab=='Metals')mt();if(st.tab=='Mutual Funds')mf();if(st.tab=='Currencies')cu();if(st.tab=='Overview')ovList()}
 const MO=['GOLD_INR','SILVER_INR','GOLD_USD','SILVER_USD','GOLDBEES','SILVERBEES','USDINR'],us=s=>/\$|USD/.test(s.unit)?'$':'₹';
 const rgb=(cur,n)=>[[21,'1M'],[63,'3M'],[126,'6M'],[250,'1Y']].map(([k,l])=>`<button class="btn ${cur==Math.min(k,n)?'':'o'}" data-%s="${k}">${l}</button>`).join('');
-function mt(){loadEX();const M=EX&&EX.metals;
- if(!M){$('#app').innerHTML=`<div class="card">${EXs<2?'Loading…':'No metals data yet. Update market_agent.py, run the market-agent workflow, and keep extra.json in the same folder as index.html.'}</div>`;return}
- const ks=MO.filter(k=>M[k]);if(!ks.includes(st.mk))st.mk=ks[0];const q=k=>{const c=M[k].c,n=c.length;return{p:c[n-1],ch:n>1?(c[n-1]/c[n-2]-1)*100:0}};
- const s=M[st.mk],n=s.c.length,rg=Math.min(st.mrg||126,n),ct=st.mct||'line',gs=M.GOLD_USD&&M.SILVER_USD?M.GOLD_USD.c.slice(-1)[0]/M.SILVER_USD.c.slice(-1)[0]:null,ret=d=>n>d?(s.c[n-1]/s.c[n-1-d]-1)*100:null;
- $('#app').innerHTML=`<div class="grid">${ks.map(k=>{const z=q(k);return `<div class="card click ${k==st.mk?'sel':''}" data-mk="${k}"><div class="nm">${esc(M[k].name)} · ${esc(M[k].unit)}</div><div class="big">${fmt(z.p)}</div><div class="${cls(z.ch)}">${sg(z.ch)} <span class="nm">1D</span></div>${spark(M[k].c.slice(-60))}</div>`}).join('')}${gs?`<div class="card"><div class="nm">Gold / Silver ratio</div><div class="big">${fmt(gs,1)}</div><div class="nm">oz of silver per oz of gold</div></div>`:''}</div>
- <h2>${esc(s.name)} · ${esc(s.unit)}</h2><div class="card"><div class="row">${[['line','Line'],['candle','Candles']].map(([k,l])=>`<button class="btn ${ct==k?'':'o'}" data-mc="${k}">${l}</button>`).join('')}${rgb(rg,n).replace(/data-%s/g,'data-mr')}</div><div class="chart" id="mc"></div><div class="stats">${[['1W',ret(5)],['1M',ret(21)],['3M',ret(63)],['6M',ret(126)],['1Y',ret(249)]].map(([l,v])=>`<div><span class="nm">${l}</span><b class="${v==null?'':cls(v)}">${v==null?'—':sg(v)}</b></div>`).join('')}<div><span class="nm">High</span><b>${fmt(Math.max(...s.h))}</b></div><div><span class="nm">Low</span><b>${fmt(Math.min(...s.l))}</b></div></div></div>
- <p class="note">Updated ${new Date(EX.updated).toLocaleString('en-IN')}. Items marked “indicative” convert international futures (Yahoo Finance) at the day’s USD/INR rate. Indian retail and MCX prices include import duty, GST and premiums, so they will be higher. ETF prices are NSE prices. Not investment advice.</p>`;
- if(ct=='candle')cchart('#mc',s.d.map((_,i)=>[s.o[i],s.h[i],s.l[i],s.c[i]]).slice(-rg),i=>s.d[n-rg+i]);else chart('#mc',[{d:s.c,c:'var(--ac)'}],rg,(i,m)=>s.d[n-m+i],us(s))}
+const SV={mt:{k:null,r:126,c:'line'},cu:{k:null,r:126,c:'line'}};
+const nodata=w=>`<div class="card">${EXs<2?'Loading…':'No '+w+' data yet. Update market_agent.py, run the market-agent workflow, and keep extra.json in the same folder as index.html.'}</div>`;
+function srv(kind,M,ks,dec,extra,note){const S=SV[kind];if(!ks.includes(S.k))S.k=ks[0];
+ const q=k=>{const c=M[k].c,n=c.length;return{p:c[n-1],ch:n>1?(c[n-1]/c[n-2]-1)*100:0}};
+ const s=M[S.k],n=s.c.length,rg=Math.min(S.r,n),ret=d=>n>d?(s.c[n-1]/s.c[n-1-d]-1)*100:null,id='sc'+kind;
+ $('#app').innerHTML=`<div class="grid">${ks.map(k=>{const z=q(k);return `<div class="card click ${k==S.k?'sel':''}" data-sv="${kind}:k:${esc(k)}"><div class="nm">${esc(M[k].name)} · ${esc(M[k].unit)}</div><div class="big">${fmt(z.p,dec)}</div><div class="${cls(z.ch)}">${sg(z.ch)} <span class="nm">1D</span></div>${spark(M[k].c.slice(-60))}</div>`}).join('')}${extra}</div>
+ <h2>${esc(s.name)} · ${esc(s.unit)}</h2><div class="card"><div class="row">${[['line','Line'],['candle','Candles']].map(([k,l])=>`<button class="btn ${S.c==k?'':'o'}" data-sv="${kind}:c:${k}">${l}</button>`).join('')}${rgb(rg,n).replace(/data-%s="(\d+)"/g,`data-sv="${kind}:r:$1"`)}</div><div class="chart" id="${id}"></div><div class="stats">${[['1W',ret(5)],['1M',ret(21)],['3M',ret(63)],['6M',ret(126)],['1Y',ret(249)]].map(([l,v])=>`<div><span class="nm">${l}</span><b class="${v==null?'':cls(v)}">${v==null?'—':sg(v)}</b></div>`).join('')}<div><span class="nm">High</span><b>${fmt(Math.max(...s.h),dec)}</b></div><div><span class="nm">Low</span><b>${fmt(Math.min(...s.l),dec)}</b></div></div></div>
+ <p class="note">Updated ${new Date(EX.updated).toLocaleString('en-IN')}. ${note} Not investment advice.</p>`;
+ if(S.c=='candle')cchart('#'+id,s.d.map((_,i)=>[s.o[i],s.h[i],s.l[i],s.c[i]]).slice(-rg),i=>s.d[n-rg+i]);else chart('#'+id,[{d:s.c,c:'var(--ac)'}],rg,(i,m)=>s.d[n-m+i],us(s))}
+function mt(){loadEX();const M=EX&&EX.metals;if(!M){$('#app').innerHTML=nodata('metals');return}
+ const gs=M.GOLD_USD&&M.SILVER_USD?M.GOLD_USD.c.slice(-1)[0]/M.SILVER_USD.c.slice(-1)[0]:null;
+ srv('mt',M,MO.filter(k=>M[k]),2,gs?`<div class="card"><div class="nm">Gold / Silver ratio</div><div class="big">${fmt(gs,1)}</div><div class="nm">oz of silver per oz of gold</div></div>`:'','Items marked “indicative” convert international futures (Yahoo Finance) at the day’s USD/INR rate. Indian retail and MCX prices include import duty, GST and premiums, so they will be higher. ETF prices are NSE prices.')}
+function cu(){loadEX();const M=EX&&EX.fx;if(!M||!Object.keys(M).length){$('#app').innerHTML=nodata('currency');return}
+ srv('cu',M,Object.keys(M),3,'','Rates show how many rupees one unit of each currency buys (Japanese yen per 100). Source: Yahoo Finance market rates, which differ from the rates banks and forex desks charge.')}
 function mf(){loadEX();const F=EX&&EX.funds;
  if(!F||!F.length){$('#app').innerHTML=`<div class="card">${EXs<2?'Loading…':'No mutual fund data yet. Run the market-agent workflow. Choose funds in the “funds” list of config.json. Keep extra.json in the same folder as index.html.'}</div>`;return}
  if(!F.some(x=>x.code==st.fc))st.fc=F[0].code;const f=F.find(x=>x.code==st.fc),n=f.c.length,rg=Math.min(st.frg||250,n),rv=v=>v==null?'—':`<span class="${cls(v)}">${sg(v)}</span>`;
@@ -295,8 +311,9 @@ function mf(){loadEX();const F=EX&&EX.funds;
  <h2>${esc(f.name)}</h2><div class="card"><div class="row">${rgb(rg,n).replace(/data-%s/g,'data-fr')}</div><div class="chart" id="fcx"></div><div class="stats"><div><span class="nm">Latest NAV · ${esc(f.date)}</span><b>₹${fmt(f.nav,4)}</b></div><div><span class="nm">High (period)</span><b>₹${fmt(Math.max(...f.c.slice(-rg)),2)}</b></div><div><span class="nm">Low (period)</span><b>₹${fmt(Math.min(...f.c.slice(-rg)),2)}</b></div><div><span class="nm">Period return</span><b class="${cls(f.c[n-1]/f.c[n-rg]-1)}">${sg((f.c[n-1]/f.c[n-rg]-1)*100)}</b></div></div></div>
  <p class="note">NAV data from AMFI via mfapi.in, updated ${new Date(EX.updated).toLocaleString('en-IN')}. Past returns do not guarantee future results. CAGR is annualised. Not investment advice.</p>`;
  chart('#fcx',[{d:f.c,c:'var(--ac)'}],rg,(i,m)=>f.d[n-m+i])}
-document.addEventListener('click',e=>{const t=e.target.closest('[data-mk],[data-mr],[data-mc],[data-fc],[data-fr]');if(!t)return;const d=t.dataset;
- if(d.mk){st.mk=d.mk;mt()}else if(d.mr){st.mrg=+d.mr;mt()}else if(d.mc){st.mct=d.mc;mt()}else if(d.fc){st.fc=d.fc;mf()}else if(d.fr){st.frg=+d.fr;mf()}});
+document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g){const[tb,k]=g.dataset.go.split('|');st.tab=tb;if(tb=='Metals')SV.mt.k=k;else if(tb=='Currencies')SV.cu.k=k;else if(tb=='Mutual Funds')st.fc=k;render();return}
+ const v=e.target.closest('[data-sv]');if(v){const[kind,a,val]=v.dataset.sv.split(':'),S=SV[kind];if(a=='k')S.k=val;else if(a=='r')S.r=+val;else S.c=val;({mt:mt,cu:cu})[kind]();return}
+ const t=e.target.closest('[data-fc],[data-fr]');if(!t)return;const d=t.dataset;if(d.fc){st.fc=d.fc;mf()}else if(d.fr){st.frg=+d.fr;mf()}});
 let HS=null,HSs=0;
 async function loadHS(){if(HSs)return;HSs=1;try{const r=await fetch('history.json',{cache:'no-store'});if(r.ok)HS=await r.json()}catch(e){}HSs=2;const x=ST.find(s=>s.s==st.sym);if(st.tab=='Stock Analyzer'&&x)hist(x)}
 const vf=v=>!v?'—':v>=1e7?fmt(v/1e7)+' Cr':v>=1e5?fmt(v/1e5)+' L':v.toLocaleString('en-IN');
