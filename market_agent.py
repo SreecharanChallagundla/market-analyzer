@@ -159,7 +159,7 @@ def export_json(data, buys, avoid, demo, rows=None):
     with open(os.path.join(DOCS_DIR, "history.json"), "w") as f:
         json.dump(hist, f, separators=(",", ":"))
 
-# ---------- OHLC, live (intraday) and PCR ----------
+# ---------- OHLC, live (intraday) ----------
 IDX_OHLC = {}
 IDX_HIST = {}
 
@@ -200,33 +200,91 @@ def run_live():
                    "intraday": intr, "quotes": quotes}, f, separators=(",", ":"))
     print(f"live.json written: {len(intr)} symbols")
 
-def fetch_pcr(sym):
-    """Put-Call Ratio (open interest) from NSE's option chain. NSE may block cloud IPs; callers handle failure."""
-    import requests
-    h = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-         "Accept": "application/json,text/plain,*/*", "Accept-Language": "en-US,en;q=0.9",
-         "Referer": "https://www.nseindia.com/option-chain"}
-    s = requests.Session(); s.get("https://www.nseindia.com/option-chain", headers=h, timeout=15)
-    rec = s.get(f"https://www.nseindia.com/api/option-chain-indices?symbol={sym}", headers=h, timeout=15).json()["records"]
-    tot = lambda rows, k: sum((x.get(k) or {}).get("openInterest", 0) for x in rows)
-    exp = rec["expiryDates"][0]; near = [x for x in rec["data"] if x.get("expiryDate") == exp]
-    return {"all": round(tot(rec["data"], "PE") / max(tot(rec["data"], "CE"), 1), 3),
-            "near": round(tot(near, "PE") / max(tot(near, "CE"), 1), 3), "exp": exp}
+FUNDS = ["Parag Parikh Flexi Cap", "HDFC Mid Cap", "Nippon India Small Cap", "UTI Nifty 50 Index", "SBI Large Cap",
+         "Kotak Emerging Equity", "Mirae Asset Large Cap", "HDFC Flexi Cap"]
+FUNDS = _cfg.get("funds", FUNDS)          # names (matched against AMFI scheme names) or numeric AMFI scheme codes
+METALS = {"GOLD_USD": ("Gold", "GC=F", "USD / oz"), "SILVER_USD": ("Silver", "SI=F", "USD / oz"),
+          "GOLDBEES": ("Gold ETF (GOLDBEES)", "GOLDBEES.NS", "Rs / unit"),
+          "SILVERBEES": ("Silver ETF (SILVERBEES)", "SILVERBEES.NS", "Rs / unit")}
 
-def update_pcr():
-    path = os.path.join(DOCS_DIR, "pcr.json")
-    try: hist = json.load(open(path))
-    except Exception: hist = {}
-    today, ok = dt.datetime.now(IST).date().isoformat(), False
-    for sym in ("NIFTY", "BANKNIFTY"):
+def _derive(base, fxmap, factor):
+    """USD/oz series -> INR series using the day's USD/INR close (indicative: no duty, GST or premium)."""
+    out, last = {k: [] for k in "ohlc"}, next(iter(fxmap.values()))
+    for i, d in enumerate(base["d"]):
+        last = fxmap.get(d, last)
+        for k in "ohlc": out[k].append(round(base[k][i] * last * factor, 2))
+    return {"d": base["d"], **out, "v": []}
+
+def fetch_metals():
+    import yfinance as yf
+    out, raw = {}, {}
+    for key, (name, t, unit) in METALS.items():
         try:
-            v = fetch_pcr(sym); v["d"] = today
-            hist[sym] = ([x for x in hist.get(sym, []) if x["d"] != today] + [v])[-250:]; ok = True
+            df = yf.Ticker(t).history(period="1y", interval="1d").dropna(subset=["Close"])
+            raw[key] = _hist(df); out[key] = {"name": name, "unit": unit.replace("Rs", "\u20b9"), **raw[key]}
         except Exception as e:
-            print(f"PCR {sym} unavailable: {e}")
-    if ok:
+            print(f"Metal {key} unavailable: {e}")
+    fxdf = yf.Ticker("USDINR=X").history(period="1y", interval="1d").dropna(subset=["Close"])
+    out["USDINR"] = {"name": "USD / INR", "unit": "\u20b9 per $", **_hist(fxdf)}
+    fxmap = {i.strftime("%Y-%m-%d"): float(v) for i, v in fxdf["Close"].items()}
+    for src, key, name, unit, f in (("GOLD_USD", "GOLD_INR", "Gold (India, indicative)", "\u20b9 / 10 g", 10 / 31.1035),
+                                    ("SILVER_USD", "SILVER_INR", "Silver (India, indicative)", "\u20b9 / kg", 1000 / 31.1035)):
+        if src in raw: out[key] = {"name": name, "unit": unit, **_derive(raw[src], fxmap, f)}
+    return out
+
+def _nw(s):
+    import re
+    return " ".join(re.sub(r"[^a-z0-9 ]+", " ", str(s).lower()).split())
+
+def _mf_resolve(entry):
+    import requests
+    if str(entry).strip().isdigit(): return int(entry)
+    words = [w for w in _nw(entry).split() if w not in ("direct", "growth", "plan", "fund")]
+    res = requests.get("https://api.mfapi.in/mf/search", params={"q": " ".join(words[:2])}, timeout=30).json()
+    cand = [x for x in res if all(w in _nw(x["schemeName"]) for w in words)]
+    good = lambda n: "direct" in _nw(n) and "growth" in _nw(n) and not any(b in _nw(n) for b in ("idcw", "dividend", "bonus", "payout", "reinvest"))
+    pref = [x for x in cand if good(x["schemeName"])] or cand
+    return int(min(pref, key=lambda x: len(x["schemeName"]))["schemeCode"]) if pref else None
+
+def _mf_fetch(code):
+    import requests
+    j = requests.get(f"https://api.mfapi.in/mf/{code}", timeout=60).json()
+    rows = sorted((dt.datetime.strptime(x["date"], "%d-%m-%Y").date(), float(x["nav"]))
+                  for x in j["data"] if x.get("nav") not in (None, "", "N.A."))
+    def at(days):
+        t = rows[-1][0] - dt.timedelta(days=days); prev = [v for d, v in rows if d <= t]
+        return prev[-1] if prev else None
+    last, r = rows[-1][1], {}
+    for k, dd in (("1M", 30), ("3M", 91), ("6M", 182), ("1Y", 365)):
+        v = at(dd); r[k] = round((last / v - 1) * 100, 2) if v else None
+    for k, y in (("3Y", 3), ("5Y", 5)):
+        v = at(365 * y); r[k] = round(((last / v) ** (1 / y) - 1) * 100, 2) if v else None
+    tail, m = rows[-250:], j.get("meta", {})
+    return {"code": str(code), "name": m.get("scheme_name", ""), "house": m.get("fund_house", ""), "cat": m.get("scheme_category", ""),
+            "nav": last, "date": rows[-1][0].isoformat(), "chg": round((last / rows[-2][1] - 1) * 100, 2) if len(rows) > 1 else 0.0,
+            "r": r, "d": [d.isoformat() for d, _ in tail], "c": [round(v, 4) for _, v in tail]}
+
+def update_extra():
+    """Metals (gold, silver) and mutual funds -> extra.json. Failures are logged and never stop the run."""
+    path = os.path.join(DOCS_DIR, "extra.json")
+    try: old = json.load(open(path))
+    except Exception: old = {}
+    new = {}
+    try: new["metals"] = fetch_metals()
+    except Exception as e: print(f"Metals unavailable: {e}")
+    funds = []
+    for entry in FUNDS:
+        try:
+            code = _mf_resolve(entry)
+            if code is None: print(f"Fund not found: {entry}"); continue
+            funds.append(_mf_fetch(code))
+        except Exception as e: print(f"Fund '{entry}' failed: {e}")
+    if funds: new["funds"] = funds
+    if new:
+        old.update(new); old["updated"] = dt.datetime.now(IST).isoformat(timespec="minutes")
         os.makedirs(DOCS_DIR, exist_ok=True)
-        with open(path, "w") as f: json.dump(hist, f, separators=(",", ":"))
+        with open(path, "w") as f: json.dump(old, f, separators=(",", ":"))
+        print(f"extra.json written: {len(new.get('metals', {}))} metal series, {len(funds)} funds")
 
 # ---------- report ----------
 def build_report(demo=False):
@@ -236,7 +294,7 @@ def build_report(demo=False):
     buys = [(s, r) for s, r in ranked if r["score"] >= MIN_BUY_SCORE][:TOP_N]
     avoid = [(s, r) for s, r in ranked[::-1] if r["score"] <= -2][:TOP_N]
     export_json(data, buys, avoid, demo, rows)
-    if not demo: update_pcr()
+    if not demo: update_extra()
     now = dt.datetime.now(IST).strftime("%d %b %Y, %I:%M %p IST")
     L = [f"MARKET SIGNALS - {now}" + ("  [DEMO DATA]" if demo else ""), ""]
     L.append("BUY WATCHLIST (ranked)")
