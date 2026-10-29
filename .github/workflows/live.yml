@@ -37,7 +37,7 @@ jobs:
         run: |
           git config user.name "market-agent"
           git config user.email "actions@users.noreply.github.com"
-          for f in data.json live.json pcr.json history.json docs/data.json docs/live.json docs/pcr.json docs/history.json; do [ -f "$f" ] && git add "$f"; done; true
+          for f in data.json live.json history.json extra.json docs/data.json docs/live.json docs/history.json docs/extra.json; do [ -f "$f" ] && git add "$f"; done; true
           if git diff --cached --quiet; then echo "No data changes to commit"; exit 0; fi
           git commit -m "Update market data"
           for i in 1 2 3 4 5; do
