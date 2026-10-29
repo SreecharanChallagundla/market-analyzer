@@ -207,6 +207,24 @@ METALS = {"GOLD_USD": ("Gold", "GC=F", "USD / oz"), "SILVER_USD": ("Silver", "SI
           "GOLDBEES": ("Gold ETF (GOLDBEES)", "GOLDBEES.NS", "Rs / unit"),
           "SILVERBEES": ("Silver ETF (SILVERBEES)", "SILVERBEES.NS", "Rs / unit")}
 
+FX = {"USD": ("US Dollar", 1), "EUR": ("Euro", 1), "GBP": ("British Pound", 1), "JPY": ("Japanese Yen", 100),
+      "AED": ("UAE Dirham", 1), "SGD": ("Singapore Dollar", 1), "AUD": ("Australian Dollar", 1),
+      "CAD": ("Canadian Dollar", 1), "CHF": ("Swiss Franc", 1), "CNY": ("Chinese Yuan", 1), "SAR": ("Saudi Riyal", 1)}
+CURRENCIES = _cfg.get("currencies", list(FX))       # 3-letter codes; each is fetched as <CODE>INR=X
+
+def fetch_fx():
+    import yfinance as yf
+    out = {}
+    for code in CURRENCIES:
+        name, mult = FX.get(code, (code, 1))
+        try:
+            df = yf.Ticker(f"{code}INR=X").history(period="1y", interval="1d").dropna(subset=["Close"])
+            if mult != 1: df[["Open", "High", "Low", "Close"]] = df[["Open", "High", "Low", "Close"]] * mult
+            out[code] = {"name": f"{code} \u00b7 {name}", "unit": f"\u20b9 per {mult if mult != 1 else 1} {code}", **_hist(df)}
+        except Exception as e:
+            print(f"Currency {code} unavailable: {e}")
+    return out
+
 def _derive(base, fxmap, factor):
     """USD/oz series -> INR series using the day's USD/INR close (indicative: no duty, GST or premium)."""
     out, last = {k: [] for k in "ohlc"}, next(iter(fxmap.values()))
@@ -272,6 +290,8 @@ def update_extra():
     new = {}
     try: new["metals"] = fetch_metals()
     except Exception as e: print(f"Metals unavailable: {e}")
+    try: new["fx"] = fetch_fx()
+    except Exception as e: print(f"Currencies unavailable: {e}")
     funds = []
     for entry in FUNDS:
         try:
