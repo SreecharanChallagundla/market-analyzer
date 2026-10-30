@@ -25,6 +25,13 @@ MARKET = "US" if _arg_market() == "US" else "IN"      # python market_agent.py -
 US = MARKET == "US"
 IST = ZoneInfo("America/New_York" if US else "Asia/Kolkata")     # local market time zone (name kept for the code below)
 TZN, SUF, CUR = ("ET", "", "$") if US else ("IST", ".NS", "Rs ")
+def _clean(o):
+    """Make values JSON-safe: NaN / Infinity become null (browsers cannot parse NaN)."""
+    if isinstance(o, (float, np.floating)): return float(o) if np.isfinite(o) else None
+    if isinstance(o, dict): return {k: _clean(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)): return [_clean(v) for v in o]
+    return o
+def _jd(o, f): json.dump(_clean(o), f, separators=(",", ":"), default=str, allow_nan=False)
 FN = lambda n: ("us_" if US else "") + n               # US data files are prefixed us_
 WATCHLIST_US = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "AVGO", "JPM", "V", "MA", "UNH", "LLY", "XOM", "CVX",
                 "JNJ", "PG", "HD", "COST", "WMT", "KO", "PEP", "NFLX", "ADBE", "CRM", "AMD", "ORCL", "BAC", "DIS", "CAT"]
@@ -165,10 +172,10 @@ def export_json(data, buys, avoid, demo, rows=None):
            "reports": build_reports(rows or {}, demo),
            "buys": [{"s": s, **clean(r)} for s, r in buys], "avoid": [{"s": s, **clean(r)} for s, r in avoid]}
     os.makedirs(DOCS_DIR, exist_ok=True)
-    with open(os.path.join(DOCS_DIR, FN("data.json")), "w") as f: json.dump(out, f, separators=(",", ":"), default=str)
+    with open(os.path.join(DOCS_DIR, FN("data.json")), "w") as f: _jd(out, f)
     hist = {"updated": out["updated"], "demo": demo, "stocks": {**{s: _hist(df) for s, df in data.items()}, **IDX_HIST}}
     with open(os.path.join(DOCS_DIR, FN("history.json")), "w") as f:
-        json.dump(hist, f, separators=(",", ":"))
+        _jd(hist, f)
 
 # ---------- OHLC, live (intraday) ----------
 IDX_OHLC = {}
@@ -207,8 +214,8 @@ def run_live():
             pass
     os.makedirs(DOCS_DIR, exist_ok=True)
     with open(os.path.join(DOCS_DIR, FN("live.json")), "w") as f:
-        json.dump({"updated": now.isoformat(timespec="minutes"), "open": market_open(now),
-                   "intraday": intr, "quotes": quotes}, f, separators=(",", ":"))
+        _jd({"updated": now.isoformat(timespec="minutes"), "open": market_open(now),
+                   "intraday": intr, "quotes": quotes}, f)
     print(f"live.json written: {len(intr)} symbols")
 
 FUNDS = ["Parag Parikh Flexi Cap", "HDFC Mid Cap", "Nippon India Small Cap", "UTI Nifty 50 Index", "SBI Large Cap",
@@ -238,8 +245,9 @@ def fetch_fx_us():
     for code in _cfg.get("currencies_us", list(FX_US)):
         t, name, unit = FX_US.get(code, (f"USD{code}=X", code, f"{code} per $1"))
         try:
-            df = yf.Ticker(t).history(period="1y", interval="1d").dropna(subset=["Close"])
-            out[code] = {"name": f"{code} \u00b7 {name}", "unit": unit, **_hist(df)}
+            tk = yf.Ticker(t); df = tk.history(period="1y", interval="1d").dropna(subset=["Close"])
+            if len(df) < 2: print(f"Currency {code} has no data"); continue
+            out[code] = {"name": f"{code} \u00b7 {name}", "unit": unit, "news": _news(tk), **_hist(df)}
         except Exception as e:
             print(f"Currency {code} unavailable: {e}")
     return out
@@ -262,7 +270,8 @@ def fetch_funds_us():
             for k, y in (("3Y", 3), ("5Y", 5)):
                 v = at(365 * y); r[k] = round(((last / v) ** (1 / y) - 1) * 100, 2) if v else None
             tail = rows[-250:]
-            out.append({"code": t, "name": info.get("longName") or t, "house": info.get("fundFamily") or "", "cat": info.get("category") or "",
+            num = lambda v: v if isinstance(v, (int, float)) else None
+            out.append({"code": t, "exp": num(info.get("netExpenseRatio")), "aum": num(info.get("totalAssets")), "news": _news(tk), "name": info.get("longName") or t, "house": info.get("fundFamily") or "", "cat": info.get("category") or "",
                         "nav": round(last, 4), "date": rows[-1][0].isoformat(), "chg": round((last / rows[-2][1] - 1) * 100, 2) if len(rows) > 1 else 0.0,
                         "r": r, "d": [d.isoformat() for d, _ in tail], "c": [round(v, 4) for _, v in tail]})
         except Exception as e:
@@ -276,9 +285,10 @@ def fetch_fx():
     for code in CURRENCIES:
         name, mult = FX.get(code, (code, 1))
         try:
-            df = yf.Ticker(f"{code}INR=X").history(period="1y", interval="1d").dropna(subset=["Close"])
+            tk = yf.Ticker(f"{code}INR=X"); df = tk.history(period="1y", interval="1d").dropna(subset=["Close"])
+            if len(df) < 2: print(f"Currency {code} has no data"); continue
             if mult != 1: df[["Open", "High", "Low", "Close"]] = df[["Open", "High", "Low", "Close"]] * mult
-            out[code] = {"name": f"{code} \u00b7 {name}", "unit": f"\u20b9 per {mult if mult != 1 else 1} {code}", **_hist(df)}
+            out[code] = {"name": f"{code} \u00b7 {name}", "unit": f"\u20b9 per {mult if mult != 1 else 1} {code}", "news": _news(tk), **_hist(df)}
         except Exception as e:
             print(f"Currency {code} unavailable: {e}")
     return out
@@ -296,17 +306,19 @@ def fetch_metals():
     out, raw = {}, {}
     for key, (name, t, unit) in METALS.items():
         try:
-            df = yf.Ticker(t).history(period="1y", interval="1d").dropna(subset=["Close"])
-            raw[key] = _hist(df); out[key] = {"name": name, "unit": unit.replace("Rs", "\u20b9"), **raw[key]}
+            tk = yf.Ticker(t); df = tk.history(period="1y", interval="1d").dropna(subset=["Close"])
+            if len(df) < 2: print(f"Metal {key} has no data"); continue
+            raw[key] = _hist(df); out[key] = {"name": name, "unit": unit.replace("Rs", "\u20b9"), "news": _news(tk), **raw[key]}
         except Exception as e:
             print(f"Metal {key} unavailable: {e}")
     if US: return out
-    fxdf = yf.Ticker("USDINR=X").history(period="1y", interval="1d").dropna(subset=["Close"])
-    out["USDINR"] = {"name": "USD / INR", "unit": "\u20b9 per $", **_hist(fxdf)}
+    tkf = yf.Ticker("USDINR=X"); fxdf = tkf.history(period="1y", interval="1d").dropna(subset=["Close"])
+    if len(fxdf) < 2: return out
+    out["USDINR"] = {"name": "USD / INR", "unit": "\u20b9 per $", "news": _news(tkf), **_hist(fxdf)}
     fxmap = {i.strftime("%Y-%m-%d"): float(v) for i, v in fxdf["Close"].items()}
     for src, key, name, unit, f in (("GOLD_USD", "GOLD_INR", "Gold (India, indicative)", "\u20b9 / 10 g", 10 / 31.1035),
                                     ("SILVER_USD", "SILVER_INR", "Silver (India, indicative)", "\u20b9 / kg", 1000 / 31.1035)):
-        if src in raw: out[key] = {"name": name, "unit": unit, **_derive(raw[src], fxmap, f)}
+        if src in raw: out[key] = {"name": name, "unit": unit, "news": out.get(src, {}).get("news", []), **_derive(raw[src], fxmap, f)}
     return out
 
 def _nw(s):
@@ -337,7 +349,7 @@ def _mf_fetch(code):
     for k, y in (("3Y", 3), ("5Y", 5)):
         v = at(365 * y); r[k] = round(((last / v) ** (1 / y) - 1) * 100, 2) if v else None
     tail, m = rows[-250:], j.get("meta", {})
-    return {"code": str(code), "name": m.get("scheme_name", ""), "house": m.get("fund_house", ""), "cat": m.get("scheme_category", ""),
+    return {"code": str(code), "name": m.get("scheme_name", ""), "house": m.get("fund_house", ""), "cat": m.get("scheme_category", ""), "type": m.get("scheme_type", ""),
             "nav": last, "date": rows[-1][0].isoformat(), "chg": round((last / rows[-2][1] - 1) * 100, 2) if len(rows) > 1 else 0.0,
             "r": r, "d": [d.isoformat() for d, _ in tail], "c": [round(v, 4) for _, v in tail]}
 
@@ -366,7 +378,7 @@ def update_extra():
     if new or errs:
         old.update(new); old["errors"] = errs; old["updated"] = dt.datetime.now(IST).isoformat(timespec="minutes")
         os.makedirs(DOCS_DIR, exist_ok=True)
-        with open(path, "w") as f: json.dump(old, f, separators=(",", ":"))
+        with open(path, "w") as f: _jd(old, f)
         print(f"extra.json written: {len(new.get('metals', {}))} metal series, {len(funds)} funds")
 
 # ---------- report ----------
