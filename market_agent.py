@@ -33,8 +33,7 @@ def _clean(o):
     return o
 def _jd(o, f): json.dump(_clean(o), f, separators=(",", ":"), default=str, allow_nan=False)
 FN = lambda n: ("us_" if US else "") + n               # US data files are prefixed us_
-WATCHLIST_US = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "AVGO", "JPM", "V", "MA", "UNH", "LLY", "XOM", "CVX",
-                "JNJ", "PG", "HD", "COST", "WMT", "KO", "PEP", "NFLX", "ADBE", "CRM", "AMD", "ORCL", "BAC", "DIS", "CAT"]
+WATCHLIST_US = ["JPM", "BAC", "WFC", "GS", "MS", "C", "AXP", "BLK", "V", "MA", "BRK-B", "UNH", "LLY", "JNJ", "PFE", "MRK", "ABBV", "TMO", "ABT", "NVO", "XOM", "CVX", "COP", "PG", "KO", "PM", "MCD", "NKE", "HD", "LOW", "DIS", "T", "VZ", "CAT", "GE", "RTX", "UNP", "DE", "IBM", "ORCL", "CRM", "TSM", "UBER", "NEE", "AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "AVGO", "COST", "NFLX", "ADBE", "AMD", "PEP", "CSCO", "TMUS", "INTC", "QCOM", "TXN", "AMGN", "INTU", "AMAT", "ISRG", "BKNG", "HON", "SBUX", "GILD", "ADP", "MU", "LRCX", "PANW", "MDLZ", "REGN", "KLAC", "CRWD", "ADI", "SNPS", "CDNS", "PYPL", "ABNB", "MRVL"]
 INTERVAL_HOURS = 2
 WATCHLIST = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "SBIN", "BHARTIARTL",
              "ITC", "LT", "HINDUNILVR", "SUNPHARMA", "MARUTI", "M&M", "AXISBANK", "WIPRO",
@@ -57,7 +56,7 @@ INDEX_TICKERS = {"NIFTY 50": "^NSEI", "NIFTY BANK": "^NSEBANK", "NIFTY IT": "^CN
                  "NIFTY NEXT 50": "^NSMIDCP", "NIFTY MIDCAP 100": "NIFTY_MIDCAP_100.NS", "NIFTY FMCG": "^CNXFMCG",
                  "SENSEX": "^BSESN", "BSE 500": "BSE-500.BO", "BSE MIDCAP": "BSE-MIDCAP.BO",
                  "BSE SMALLCAP": "BSE-SMLCAP.BO"}   # any that fail are skipped; dashboard shows simulated values for them
-if US: INDEX_TICKERS = {"S&P 500": "^GSPC", "NASDAQ": "^IXIC", "DOW JONES": "^DJI", "NASDAQ 100": "^NDX", "RUSSELL 2000": "^RUT", "VIX": "^VIX"}
+if US: INDEX_TICKERS = {"NYSE COMPOSITE": "^NYA", "NYSE US 100": "^NY", "DOW JONES": "^DJI", "NASDAQ": "^IXIC", "NASDAQ 100": "^NDX", "SEMICONDUCTOR": "^SOX"}
 
 # ---------- data ----------
 def load(symbols, demo=False):
@@ -67,7 +66,7 @@ def load(symbols, demo=False):
             r = np.random.default_rng(abs(hash(s)) % 2**32)
             c = 1000 * np.exp(np.cumsum(r.normal(0.0004, 0.014, 300)))
             out[s] = pd.DataFrame({"Open": np.r_[c[0], c[:-1]], "Close": c, "High": c * 1.01, "Low": c * 0.99,
-                                   "Volume": r.integers(1e6, 5e6, 300)}, index=pd.bdate_range(end=dt.date.today(), periods=300))
+                                   "Volume": r.integers(1e6, 5e6, 300)}, index=pd.bdate_range(end=dt.date.today(), periods=301)[-300:])
         return out
     import yfinance as yf
     tick = [s + SUF for s in symbols]
