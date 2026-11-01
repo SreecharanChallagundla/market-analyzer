@@ -182,7 +182,7 @@ function ovList(){const el=$('#ovr');if(!el)return;loadEX();
  const last=s=>{const c=s.c,n=c.length;return{p:c[n-1],c:n>1?(c[n-1]/c[n-2]-1)*100:0}};
  const sk=ST.map(x=>{const q=qt(x.s);return q?wrow(`data-s="${esc(x.s)}"`,x.s,x.n+(st.x=='BSE'&&x.b&&x.b!='—'?' · BSE '+x.b:''),CUR+fmt(q.p),q.c):''}).filter(Boolean);
  const fd=((EX&&EX.funds)||[]).filter(okS).map(f=>wrow(`data-go="Mutual Funds|${esc(f.code)}"`,sh(f.name),(f.cat||'').replace(/^[A-Za-z]+ Scheme - /,''),CUR+fmt(f.nav),f.chg));
- const M=(EX&&EX.metals)||{},mm=MO.filter(k=>okS(M[k])&&k!='USDINR').map(k=>{const z=last(M[k]);return wrow(`data-go="Metals|${k}"`,M[k].name,M[k].unit,fmt(z.p),z.c)});
+ const M=cvM((EX&&EX.metals)||{}),mm=MO.filter(k=>okS(M[k])&&k!='USDINR').map(k=>{const z=last(M[k]);return wrow(`data-go="Metals|${k}"`,M[k].name,M[k].unit,fmt(z.p),z.c)});
  const X=(EX&&EX.fx)||{},cc=Object.keys(X).filter(k=>okS(X[k])).map(k=>{const z=last(X[k]);return wrow(`data-go="Currencies|${k}"`,X[k].name,X[k].unit,fmt(z.p,3),z.c)});
  const key=[sk,fd,mm,cc].map(a=>a.join('')).join('|')+mkt().open;if(el.dataset.h===key)return;el.dataset.h=key;
  el.innerHTML=ovW(`All stocks <span class="nm">· ${sk.length}</span>`,sk,Math.max(220,Math.min(340,innerHeight-400)),'hover to pause · click to analyze',mkt().open)+ovW('Mutual funds',fd,200,'click to open')+ovW('Metals',mm,200,'gold &amp; silver')+ovW('Currencies vs '+CUR,cc,200,'click to open');
@@ -295,22 +295,26 @@ function ctDraw(x){const m=st.ct||'line';if(m=='line')return;
 document.addEventListener('click',e=>{const t=e.target.closest('[data-ct]');if(t){st.ct=t.dataset.ct;draw()}});
 let EX=null,EXs=0;
 async function loadEX(){if(EXs)return;EXs=1;const mk=st.m;try{const j=await getJ(PFX+'extra.json');if(j&&mk==st.m)EX=j}catch(e){}if(mk!=st.m)return;EXs=2;if(st.tab=='Metals')mt();if(st.tab=='Mutual Funds')mf();if(st.tab=='Currencies')cu();if(st.tab=='Overview'){ovList();try{ovVis()}catch(e){}}}
-const MO=['GOLD_INR','SILVER_INR','GOLD_USD','SILVER_USD','GOLDBEES','SILVERBEES','GLD','SLV','USDINR'],us=s=>/^\s*(₹|Rs)/.test(s.unit)?'₹':/^\s*(\$|USD)/.test(s.unit)?'$':'';
+const MG=31.1035,MUN={IN:[['1g','1 g',1],['10g','10 g',10],['1kg','1 kg',1000]],US:[['1g','1 g',1],['1oz','1 oz',MG],['1kg','1 kg',1000]]};
+const muKey=()=>{const L=MUN[st.m=='US'?'US':'IN'];return L.some(u=>u[0]==st.mu)?st.mu:(st.m=='US'?'1oz':'10g')};
+function mmeta(s){let g=s.g,cur=s.cur;const u=String(s.unit||'');if(!g){if(/\/\s*oz/i.test(u))g=MG;else if(/\/\s*10\s*g/i.test(u))g=10;else if(/\/\s*kg/i.test(u))g=1000;else if(/\/\s*g\b/i.test(u))g=1}if(!cur)cur=/^\s*(₹|Rs)/.test(u)?'₹':'$';return g?{g,cur}:null}
+function cvM(M){const T=MUN[st.m=='US'?'US':'IN'].find(u=>u[0]==muKey()),out={};for(const k in M){const s=M[k],m=mmeta(s);if(!m||!okS(s)){out[k]=s;continue}const f=T[2]/m.g,sc=a=>a&&a.map(v=>v*f);out[k]={...s,o:sc(s.o),h:sc(s.h),l:sc(s.l),c:sc(s.c),unit:m.cur+' / '+T[1],short:String(s.name).split(' (')[0]+' '+m.cur+'/'+T[1].replace(' ','')}}return out}
+const MO=['GOLD_INR','SILVER_INR','PLATINUM_INR','GOLD_USD','SILVER_USD','PLATINUM_USD','GOLDBEES','SILVERBEES','GLD','SLV','USDINR'],us=s=>/^\s*(₹|Rs)/.test(s.unit)?'₹':/^\s*(\$|USD)/.test(s.unit)?'$':'';
 const rgb=(cur,n)=>[[21,'1M'],[63,'3M'],[126,'6M'],[250,'1Y']].map(([k,l])=>`<button class="btn ${cur==Math.min(k,n)?'':'o'}" data-%s="${k}">${l}</button>`).join('');
 const SV={mt:{k:null,r:126,c:'line'},cu:{k:null,r:126,c:'line'}};
 const nodata=(w,k)=>{let m;if(EXs<2)m='Loading…';else if(!EX)m=''+PFX+'extra.json was not found next to index.html. Update market_agent.py, run the market-agent workflow, and check that '+PFX+'extra.json is in the same folder as index.html in your repo.';else if(EX.errors&&EX.errors[k])m='The agent ran but could not load '+w+' data: '+EX.errors[k]+'. Open the market-agent run log for details.';else m=''+PFX+'extra.json has no '+w+' section, which means the market_agent.py on GitHub is an older version. Upload the latest market_agent.py and run the market-agent workflow again.';return `<div class="card">${esc(m)}</div>`};
-function srv(kind,M,ks,dec,extra,note){const S=SV[kind];if(!ks.includes(S.k))S.k=ks[0];
+function srv(kind,M,ks,dec,extra,note,pre){const S=SV[kind];if(!ks.includes(S.k))S.k=ks[0];
  const q=k=>{const c=M[k].c,n=c.length;return{p:c[n-1],ch:n>1?(c[n-1]/c[n-2]-1)*100:0}};
  const s=M[S.k],n=s.c.length,rg=Math.min(S.r,n),ret=d=>n>d?(s.c[n-1]/s.c[n-1-d]-1)*100:null,id='sc'+kind;
- $('#app').innerHTML=`<div class="split"><div style="min-width:0"><div class="grid">${ks.map(k=>{const z=q(k);return `<div class="card click ${k==S.k?'sel':''}" data-sv="${kind}:k:${esc(k)}"><div class="nm">${esc(M[k].name)} · ${esc(M[k].unit)}</div><div class="big">${fmt(z.p,dec)}</div><div class="${cls(z.ch)}">${sg(z.ch)} <span class="nm">1D</span></div>${spark(M[k].c.slice(-60))}</div>`}).join('')}${extra}</div>
+ $('#app').innerHTML=`<div class="split"><div style="min-width:0">${pre||''}<div class="grid">${ks.map(k=>{const z=q(k);return `<div class="card click ${k==S.k?'sel':''}" data-sv="${kind}:k:${esc(k)}"><div class="nm">${esc(M[k].name)} · ${esc(M[k].unit)}</div><div class="big">${fmt(z.p,dec)}</div><div class="${cls(z.ch)}">${sg(z.ch)} <span class="nm">1D</span></div>${spark(M[k].c.slice(-60))}</div>`}).join('')}${extra}</div>
  <div id="sv" class="cols" style="margin:12px 0"></div>
  <h2>${esc(s.name)} · ${esc(s.unit)}</h2><div class="card"><div class="row">${[['line','Line'],['candle','Candles']].map(([k,l])=>`<button class="btn ${S.c==k?'':'o'}" data-sv="${kind}:c:${k}">${l}</button>`).join('')}${rgb(rg,n).replace(/data-%s="(\d+)"/g,`data-sv="${kind}:r:$1"`)}</div><div class="chart" id="${id}"></div><div class="stats">${[['1W',ret(5)],['1M',ret(21)],['3M',ret(63)],['6M',ret(126)],['1Y',ret(249)]].map(([l,v])=>`<div><span class="nm">${l}</span><b class="${v==null?'':cls(v)}">${v==null?'—':sg(v)}</b></div>`).join('')}<div><span class="nm">High</span><b>${fmt(Math.max(...s.h),dec)}</b></div><div><span class="nm">Low</span><b>${fmt(Math.min(...s.l),dec)}</b></div></div></div>
  <div id="hs2"></div><p class="note">Updated ${new Date(EX.updated).toLocaleString('en-IN')}. ${note} Not investment advice.</p></div><aside id="rp"></aside></div>`;
  if(S.c=='candle')cchart('#'+id,s.d.map((_,i)=>[s.o[i],s.h[i],s.l[i],s.c[i]]).slice(-rg),i=>s.d[n-rg+i]);else chart('#'+id,[{d:s.c,c:'var(--ac)'}],rg,(i,m)=>s.d[n-m+i],us(s));H2S[kind]={s,dec};hist2($('#hs2'),s,kind,dec);$('#rp').innerHTML=rep2(s,kind,dec);srvVis(kind,M,ks)}
-function mt(){loadEX();const M=EX&&EX.metals;if(!M){$('#app').innerHTML=nodata('metals','metals');return}
- if(!MO.some(k=>okS(M[k]))){$('#app').innerHTML=nodata('metals','metals');return}
- const gs=okS(M.GOLD_USD)&&okS(M.SILVER_USD)?M.GOLD_USD.c.slice(-1)[0]/M.SILVER_USD.c.slice(-1)[0]:null;
- srv('mt',M,MO.filter(k=>okS(M[k])),2,gs?`<div class="card"><div class="nm">Gold / Silver ratio</div><div class="big">${fmt(gs,1)}</div><div class="nm">oz of silver per oz of gold</div></div>`:'',(st.m=='US'?'Gold and silver are COMEX futures prices in USD per troy ounce (Yahoo Finance). GLD and SLV are NYSE-listed ETFs.':'Items marked “indicative” convert international futures (Yahoo Finance) at the day’s USD/INR rate. Indian retail and MCX prices include import duty, GST and premiums, so they will be higher. ETF prices are NSE prices.'))}
+function mt(){loadEX();const M0=EX&&EX.metals;if(!M0){$('#app').innerHTML=nodata('metals','metals');return}
+ const M=cvM(M0);if(!MO.some(k=>okS(M[k]))){$('#app').innerHTML=nodata('metals','metals');return}
+ const key=muKey(),gs=okS(M.GOLD_USD)&&okS(M.SILVER_USD)?M.GOLD_USD.c.slice(-1)[0]/M.SILVER_USD.c.slice(-1)[0]:null,pre=`<div class="row" style="margin-bottom:10px"><span class="nm">Show metal prices per</span>${MUN[st.m=='US'?'US':'IN'].map(([k,l])=>`<button class="btn ${k==key?'':'o'}" data-mu="${k}">${l}</button>`).join('')}<span class="nm">1 troy oz = 31.1035 g · ETFs are priced per unit and do not change</span></div>`;
+ srv('mt',M,MO.filter(k=>okS(M[k])),key=='1g'?3:2,gs?`<div class="card"><div class="nm">Gold / Silver ratio</div><div class="big">${fmt(gs,1)}</div><div class="nm">oz of silver per oz of gold</div></div>`:'',(st.m=='US'?'Gold and silver are COMEX futures prices in USD per troy ounce (Yahoo Finance). GLD and SLV are NYSE-listed ETFs.':'Items marked “indicative” convert international futures (Yahoo Finance) at the day’s USD/INR rate. Indian retail and MCX prices include import duty, GST and premiums, so they will be higher. ETF prices are NSE prices.'),pre)}
 function cu(){loadEX();const M=EX&&EX.fx,ks=M?Object.keys(M).filter(k=>okS(M[k])):[];if(!ks.length){$('#app').innerHTML=nodata('currency','fx');return}
  srv('cu',M,ks,3,'',(st.m=='US'?'Yahoo Finance market rates against the US dollar. EUR, GBP and AUD are dollars per unit; the others are units per dollar. Bank and card rates differ.':'Rates show how many rupees one unit of each currency buys (Japanese yen per 100). Source: Yahoo Finance market rates, which differ from the rates banks and forex desks charge.'))}
 function mf(){loadEX();const F=EX&&EX.funds&&EX.funds.filter(okS);
@@ -333,14 +337,14 @@ function mstrip(s){const m=new Map();s.c.forEach((v,i)=>m.set(String(s.d[i]).sli
  return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px">${o.map(x=>`<div style="border-radius:8px;padding:6px 4px;text-align:center;background:color-mix(in srgb,var(${x.v>=0?'--up':'--dn'}) ${Math.min(60,Math.abs(x.v)*7+8)}%,var(--card));border:1px solid var(--bd)"><div class="nm" style="color:inherit;opacity:.8">${new Date(x.m+'-15').toLocaleString('en',{month:'short'})} ’${x.m.slice(2,4)}</div><b style="font-size:13px">${sg(x.v)}</b></div>`).join('')}</div>`}
 function ddc(s){let pk=s.c[0];const dd=s.c.map(v=>{pk=Math.max(pk,v);return(v/pk-1)*100}),mn=Math.min(...dd,-0.01),W=300,H=70,pts=dd.map((v,i)=>(i/(dd.length-1)*W).toFixed(1)+','+(4+(v/mn)*(H-10)).toFixed(1)).join(' ');
  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto"><polygon points="0,4 ${pts} ${W},4" fill="var(--dn)" opacity=".22"/><polyline points="${pts}" fill="none" stroke="var(--dn)" stroke-width="1.5"/><text x="4" y="${H-3}" font-size="11" fill="var(--mu)">Deepest drop ${fmt(Math.min(...dd),1)}%</text></svg>`}
-const SBP=[['1D',1],['1W',5],['1M',21],['3M',63],['1Y',249]],MLB={GOLD_INR:'Gold ₹/10g',SILVER_INR:'Silver ₹/kg',GOLD_USD:'Gold $/oz',SILVER_USD:'Silver $/oz',GOLDBEES:'GOLDBEES',SILVERBEES:'SILVERBEES',GLD:'GLD',SLV:'SLV',USDINR:'USD / INR'};
+const SBP=[['1D',1],['1W',5],['1M',21],['3M',63],['1Y',249]],MLB={GOLD_INR:'Gold ₹/10g',SILVER_INR:'Silver ₹/kg',PLATINUM_INR:'Platinum ₹/10g',PLATINUM_USD:'Platinum $/oz',GOLD_USD:'Gold $/oz',SILVER_USD:'Silver $/oz',GOLDBEES:'GOLDBEES',SILVERBEES:'SILVERBEES',GLD:'GLD',SLV:'SLV',USDINR:'USD / INR'};
 function ovVis(){const el=$('#ovv');if(!el)return;const rows=ST.map(x=>{const a=S(x),q=qt(x.s);return{s:x.s,sec:x.sec,c:q?q.c:chg(a),a}});if(!rows.length){el.innerHTML='';return}
  const adv=rows.filter(r=>r.c>0.005).length,dec=rows.filter(r=>r.c<-0.005).length,flat=rows.length-adv-dec,ab=rows.filter(r=>{const m=sma_(r.a,50);return m!=null&&r.a[r.a.length-1]>m}).length/rows.length*100;
  const srt=[...rows].sort((a,b)=>b.c-a.c),mv=[...srt.slice(0,5),...srt.slice(-5)].filter((r,i,ar)=>ar.findIndex(q=>q.s==r.s)==i).map(r=>({l:r.s,v:r.c}));
  const sc={};rows.forEach(r=>(sc[r.sec]=sc[r.sec]||[]).push(r.c));const sr=Object.entries(sc).map(([k,v])=>[k,v.reduce((p,c)=>p+c,0)/v.length]).sort((a,b)=>b[1]-a[1]);
- const sb=st.sb||'1M',d=SBP.find(p=>p[0]==sb)[1],R=a=>a&&a.length>d?(a[a.length-1]/a[a.length-1-d]-1)*100:null,it=[],M=(EX&&EX.metals)||{},X=(EX&&EX.fx)||{},us=st.m=='US';
+ const sb=st.sb||'1M',d=SBP.find(p=>p[0]==sb)[1],R=a=>a&&a.length>d?(a[a.length-1]/a[a.length-1-d]-1)*100:null,it=[],M=cvM((EX&&EX.metals)||{}),X=(EX&&EX.fx)||{},us=st.m=='US';
  ALLIDX.slice(0,3).forEach(i=>it.push({l:i[0].slice(0,16),v:R(I(i))}));
- (us?['GOLD_USD','SILVER_USD']:['GOLD_INR','SILVER_INR']).forEach(k=>{if(okS(M[k]))it.push({l:MLB[k],v:R(M[k].c)})});
+ (us?['GOLD_USD','SILVER_USD','PLATINUM_USD']:['GOLD_INR','SILVER_INR','PLATINUM_INR']).forEach(k=>{if(okS(M[k]))it.push({l:M[k].short||MLB[k],v:R(M[k].c)})});
  (us?['EUR','JPY']:['USD','EUR']).forEach(k=>{if(okS(X[k]))it.push({l:k+(us?' / $':' / ₹'),v:R(X[k].c)})});
  const F=((EX&&EX.funds)||[]).filter(f=>okS(f)&&f.r&&f.r['1Y']!=null).sort((a,b)=>b.r['1Y']-a.r['1Y']).slice(0,6);
  el.innerHTML=`<div class="cols">
@@ -350,12 +354,13 @@ function ovVis(){const el=$('#ovv');if(!el)return;const rows=ST.map(x=>{const a=
  <div class="card vv"><div class="row" style="margin:0 0 6px;justify-content:space-between"><span class="nm">Cross-asset scoreboard</span><span>${SBP.map(([l])=>`<button class="btn ${l==sb?'':'o'}" style="padding:3px 8px;font-size:12px" data-sb="${l}">${l}</button>`).join(' ')}</span></div>${hbar(it.filter(x=>x.v!=null),320)}</div>
  ${F.length?`<div class="card vv"><div class="nm" style="margin-bottom:6px">Top funds · 1-year return</div>${hbar(F.map(f=>({l:sh(f.name).replace(/ Fund$/,'').slice(0,18),v:f.r['1Y']})),320)}</div>`:''}</div>`}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-sb]');if(b){st.sb=b.dataset.sb;ovVis()}});
-function srvVis(kind,M,ks){const el=$('#sv');if(!el)return;const lb=k=>kind=='mt'?(MLB[k]||k):k,R=(k,d)=>{const c=M[k].c;return c.length>d?(c[c.length-1]/c[c.length-1-d]-1)*100:null},B=d=>hbar(ks.map(k=>({l:lb(k),v:R(k,d)})).filter(x=>x.v!=null),320);
+function srvVis(kind,M,ks){const el=$('#sv');if(!el)return;const lb=k=>kind=='mt'?(M[k].short||MLB[k]||k):k,R=(k,d)=>{const c=M[k].c;return c.length>d?(c[c.length-1]/c[c.length-1-d]-1)*100:null},B=d=>hbar(ks.map(k=>({l:lb(k),v:R(k,d)})).filter(x=>x.v!=null),320);
  let c3='',g=null,v=null,n=0;if(kind=='mt'&&okS(M.GOLD_USD)&&okS(M.SILVER_USD)){g=M.GOLD_USD.c;v=M.SILVER_USD.c;n=Math.min(g.length,v.length,250);c3=`<div class="card vv"><div class="nm">Gold vs silver · rebased to 100 <span style="color:var(--ac)">— gold</span> <span style="color:#e59f0a">— silver</span></div><div class="chart" id="svr"></div></div>`}
  el.innerHTML=`<div class="card vv"><div class="nm" style="margin-bottom:6px">1-month change</div>${B(21)}</div><div class="card vv"><div class="nm" style="margin-bottom:6px">1-year change</div>${B(249)}</div>${c3}`;
  if(c3)chart('#svr',[{d:g.slice(-n).map(x=>x/g[g.length-n]*100),c:'var(--ac)'},{d:v.slice(-n).map(x=>x/v[v.length-n]*100),c:'#e59f0a'}],n,(i,m)=>M.GOLD_USD.d[g.length-m+i],'')}
 function mfVis(F){const el=$('#sv');if(!el)return;const b=k=>hbar(F.filter(f=>f.r&&f.r[k]!=null).sort((a,c)=>c.r[k]-a.r[k]).map(f=>({l:sh(f.name).replace(/ Fund$/,'').slice(0,18),v:f.r[k]})),320);
  el.innerHTML=`<div class="card vv"><div class="nm" style="margin-bottom:6px">1-year return by fund</div>${b('1Y')}</div><div class="card vv"><div class="nm" style="margin-bottom:6px">3-year CAGR by fund</div>${b('3Y')}</div>`}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-mu]');if(b){st.mu=b.dataset.mu;try{localStorage.setItem('mu_'+st.m,st.mu)}catch(x){}mt()}});
 const H2={mt:63,cu:63,mf:63},H2S={};
 const sma_=(a,n)=>a.length>=n?a.slice(-n).reduce((p,c)=>p+c,0)/n:null,ema_=(a,n)=>{const k=2/(n+1);let e=a[0];return a.map(v=>e=v*k+e*(1-k))};
 function rsi_(a,n=14){if(a.length<=n)return null;let g=0,l=0;for(let i=a.length-n;i<a.length;i++){const d=a[i]-a[i-1];d>0?g+=d:l-=d}return l?100-100/(1+g/l):100}
@@ -424,7 +429,7 @@ function pickList(){ST=st.m=='IN'?ST_IN:st.x=='NDX'?ST_NDX:ST_NYSE;ALLIDX=st.m==
  const D=st.m=='IN'?MKS.IN:UNI[st.x];try{st.wl=JSON.parse(localStorage.getItem(K('wl'))||'[]')}catch(e){st.wl=[]}if(!st.wl.length)st.wl=[...D.wl];
  if(!ST.some(x=>x.s==st.sym))st.sym=D.sym;st.idx=0}
 function usUni(){try{localStorage.setItem('ux',st.x)}catch(e){}pickList();ticker()}
-function setMarket(m,boot){st.m=m;const M=MKS[m];CUR=M.cur;LOC=M.loc;PFX=M.pfx;try{localStorage.setItem('mk',m)}catch(e){}
+function setMarket(m,boot){st.m=m;const M=MKS[m];CUR=M.cur;LOC=M.loc;PFX=M.pfx;try{localStorage.setItem('mk',m)}catch(e){}try{st.mu=localStorage.getItem('mu_'+m)||''}catch(e){st.mu=''}
  Object.keys(cache).forEach(k=>delete cache[k]);Object.keys(REAL).forEach(k=>delete REAL[k]);AG=null;LV=null;HS=null;HSs=0;EX=null;EXs=0;tkH='';
  let ux='NYSE';try{ux=localStorage.getItem('ux')=='NDX'?'NDX':'NYSE'}catch(e){}
  st.x=m=='US'?ux:'NSE';st.sym=M.sym;st.ed=null;
