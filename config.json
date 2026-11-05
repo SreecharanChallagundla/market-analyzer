@@ -209,5 +209,156 @@
     "XLM",
     "ATOM",
     "NEAR"
+  ],
+  "gold_etfs": [
+    {
+      "code": "GOLDBEES",
+      "name": "Nippon India ETF Gold BeES",
+      "ref": 115.2,
+      "exp": 0.79,
+      "fit": "Commodities"
+    },
+    {
+      "code": "HDFCGOLD",
+      "name": "HDFC Gold ETF",
+      "ref": 120.41,
+      "exp": 0.59,
+      "fit": "Commodities"
+    },
+    {
+      "code": "SBIGOLD",
+      "name": "SBI Gold ETF",
+      "ref": 118.68,
+      "exp": 0.65,
+      "fit": "Commodities"
+    },
+    {
+      "code": "GOLDIETF",
+      "name": "ICICI Prudential Gold ETF",
+      "ref": 116.55,
+      "exp": 0.5,
+      "fit": "Commodities"
+    },
+    {
+      "code": "GOLD1",
+      "name": "Kotak Gold ETF",
+      "ref": 116.11,
+      "exp": 0.55,
+      "fit": "Commodities"
+    },
+    {
+      "code": "GOLDAXIS",
+      "name": "Axis Gold ETF",
+      "ref": 115.92,
+      "exp": 0.53,
+      "fit": "Commodities"
+    },
+    {
+      "code": "UTIGOLD",
+      "name": "UTI Gold ETF",
+      "ref": 114.7,
+      "exp": 0.46,
+      "fit": "Commodities"
+    },
+    {
+      "code": "BSLGOLD",
+      "name": "Aditya Birla Sun Life Gold ETF",
+      "ref": 119.94,
+      "exp": 0.54,
+      "fit": "Commodities"
+    },
+    {
+      "code": "GOLDETF",
+      "name": "Mirae Asset Gold ETF",
+      "ref": 132.69,
+      "exp": null,
+      "fit": "Commodities"
+    },
+    {
+      "code": "LICMFGOLD",
+      "name": "LIC MF Gold ETF",
+      "ref": 123.05,
+      "exp": null,
+      "fit": "Commodities"
+    },
+    {
+      "code": "QGOLDHALF",
+      "name": "Quantum Gold ETF",
+      "ref": 112.98,
+      "exp": 0.78,
+      "fit": "Commodities"
+    },
+    {
+      "code": "IVGOLD",
+      "name": "Invesco India Gold ETF",
+      "ref": 119.0,
+      "exp": 0.55,
+      "fit": "Commodities"
+    },
+    {
+      "code": "GROWWGOLD",
+      "name": "Groww Gold ETF",
+      "ref": 14.31,
+      "exp": null,
+      "fit": "Commodities"
+    },
+    {
+      "code": "GOLDCASE",
+      "name": "Zerodha Gold ETF",
+      "ref": 21.47,
+      "exp": null,
+      "fit": "Commodities"
+    }
+  ],
+  "gold_etfs_us": [
+    {
+      "code": "GLD",
+      "name": "SPDR Gold Shares",
+      "ref": null,
+      "exp": 0.4,
+      "fit": "Commodities"
+    },
+    {
+      "code": "IAU",
+      "name": "iShares Gold Trust",
+      "ref": null,
+      "exp": 0.25,
+      "fit": "Commodities"
+    },
+    {
+      "code": "GLDM",
+      "name": "SPDR Gold MiniShares",
+      "ref": null,
+      "exp": 0.1,
+      "fit": "Commodities"
+    },
+    {
+      "code": "SGOL",
+      "name": "abrdn Physical Gold Shares",
+      "ref": null,
+      "exp": 0.17,
+      "fit": "Commodities"
+    },
+    {
+      "code": "BAR",
+      "name": "GraniteShares Gold Trust",
+      "ref": null,
+      "exp": 0.1749,
+      "fit": "Commodities"
+    },
+    {
+      "code": "AAAU",
+      "name": "Goldman Sachs Physical Gold ETF",
+      "ref": null,
+      "exp": 0.18,
+      "fit": "Commodities"
+    },
+    {
+      "code": "OUNZ",
+      "name": "VanEck Merk Gold Trust",
+      "ref": null,
+      "exp": 0.25,
+      "fit": "Commodities"
+    }
   ]
 }
