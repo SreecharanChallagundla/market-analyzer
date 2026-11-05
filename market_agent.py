@@ -452,6 +452,32 @@ def fetch_evi():
     return {"name": "Equity Valuation Index", "bench": label, "method": "index price / its 5-year average x 100",
             "d": [i.strftime("%Y-%m") for i in v.index], "v": [round(float(x), 1) for x in v.values]}
 
+GOLD_ETFS = [{"code": "GOLDBEES", "name": "Nippon India ETF Gold BeES", "ref": 115.2, "exp": 0.79, "fit": "Commodities"}, {"code": "HDFCGOLD", "name": "HDFC Gold ETF", "ref": 120.41, "exp": 0.59, "fit": "Commodities"}, {"code": "SBIGOLD", "name": "SBI Gold ETF", "ref": 118.68, "exp": 0.65, "fit": "Commodities"}, {"code": "GOLDIETF", "name": "ICICI Prudential Gold ETF", "ref": 116.55, "exp": 0.5, "fit": "Commodities"}, {"code": "GOLD1", "name": "Kotak Gold ETF", "ref": 116.11, "exp": 0.55, "fit": "Commodities"}, {"code": "GOLDAXIS", "name": "Axis Gold ETF", "ref": 115.92, "exp": 0.53, "fit": "Commodities"}, {"code": "UTIGOLD", "name": "UTI Gold ETF", "ref": 114.7, "exp": 0.46, "fit": "Commodities"}, {"code": "BSLGOLD", "name": "Aditya Birla Sun Life Gold ETF", "ref": 119.94, "exp": 0.54, "fit": "Commodities"}, {"code": "GOLDETF", "name": "Mirae Asset Gold ETF", "ref": 132.69, "exp": None, "fit": "Commodities"}, {"code": "LICMFGOLD", "name": "LIC MF Gold ETF", "ref": 123.05, "exp": None, "fit": "Commodities"}, {"code": "QGOLDHALF", "name": "Quantum Gold ETF", "ref": 112.98, "exp": 0.78, "fit": "Commodities"}, {"code": "IVGOLD", "name": "Invesco India Gold ETF", "ref": 119.0, "exp": 0.55, "fit": "Commodities"}, {"code": "GROWWGOLD", "name": "Groww Gold ETF", "ref": 14.31, "exp": None, "fit": "Commodities"}, {"code": "GOLDCASE", "name": "Zerodha Gold ETF", "ref": 21.47, "exp": None, "fit": "Commodities"}]
+GOLD_ETFS_US = [{"code": "GLD", "name": "SPDR Gold Shares", "ref": None, "exp": 0.4, "fit": "Commodities"}, {"code": "IAU", "name": "iShares Gold Trust", "ref": None, "exp": 0.25, "fit": "Commodities"}, {"code": "GLDM", "name": "SPDR Gold MiniShares", "ref": None, "exp": 0.1, "fit": "Commodities"}, {"code": "SGOL", "name": "abrdn Physical Gold Shares", "ref": None, "exp": 0.17, "fit": "Commodities"}, {"code": "BAR", "name": "GraniteShares Gold Trust", "ref": None, "exp": 0.1749, "fit": "Commodities"}, {"code": "AAAU", "name": "Goldman Sachs Physical Gold ETF", "ref": None, "exp": 0.18, "fit": "Commodities"}, {"code": "OUNZ", "name": "VanEck Merk Gold Trust", "ref": None, "exp": 0.25, "fit": "Commodities"}]
+
+def fetch_gold_etfs():
+    """Gold ETFs: price history plus the reference price, expense ratio and strategic fit from config.json.
+    An ETF Yahoo has no data for is still listed (with its reference price) so the table stays complete."""
+    import yfinance as yf
+    out = {}
+    for e in _cfg.get("gold_etfs_us" if US else "gold_etfs", GOLD_ETFS_US if US else GOLD_ETFS):
+        code = e["code"]
+        item = {"name": e.get("name", code), "fit": e.get("fit", "Commodities"), "ref": e.get("ref"), "exp": e.get("exp"),
+                "unit": "$ / share" if US else "\u20b9 / unit"}
+        try:
+            tk = yf.Ticker(code + SUF); df = tk.history(period="1y", interval="1d").dropna(subset=["Close"])
+            if len(df) >= 2: item.update(_hist(df))
+            else: print(f"Gold ETF {code} has no price data")
+            if item["exp"] is None:
+                try:
+                    v = (tk.info or {}).get("netExpenseRatio")
+                    if isinstance(v, (int, float)) and 0 < v < 3: item["exp"] = round(float(v), 4)
+                except Exception: pass
+        except Exception as ex:
+            print(f"Gold ETF {code} unavailable: {ex}")
+        out[code] = item
+    return out
+
 def update_extra():
     """Metals (gold, silver) and mutual funds -> extra.json. Failures are logged and never stop the run."""
     path = os.path.join(DOCS_DIR, FN("extra.json"))
@@ -465,6 +491,11 @@ def update_extra():
         if fx: new["fx"] = fx
         else: errs["fx"] = "Yahoo Finance returned no data for any currency pair"
     except Exception as e: errs["fx"] = str(e)[:120]; print(f"Currencies unavailable: {e}")
+    try:
+        ge = fetch_gold_etfs()
+        if ge: new["goldetf"] = ge
+        else: errs["goldetf"] = "no gold ETF list configured"
+    except Exception as e: errs["goldetf"] = str(e)[:120]; print(f"Gold ETFs unavailable: {e}")
     try:
         cr = fetch_crypto()
         if cr: new["crypto"] = cr
