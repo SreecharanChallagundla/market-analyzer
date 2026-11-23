@@ -518,6 +518,115 @@ def update_extra():
         with open(path, "w") as f: _jd(old, f)
         print(f"extra.json written: {len(new.get('metals', {}))} metal series, {len(funds)} funds")
 
+# ---------- market news and IPO calendar ----------
+UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+      "Accept": "application/json,text/plain,*/*", "Accept-Language": "en-US,en;q=0.9"}
+NEWS_QUERIES = _cfg.get("news_queries", {
+    "trends": "Wall Street stock market S&P 500 Nasdaq" if US else "Sensex Nifty stock market",
+    "gold": "gold price" if US else "gold price India MCX",
+    "silver": "silver price" if US else "silver price India MCX",
+    "ipo": "IPO market upcoming IPOs" if US else "IPO India subscription opens"})
+
+def _rss(q, n=6):
+    """Headlines from the Google News RSS feed (title, source, link, time only)."""
+    import requests, xml.etree.ElementTree as ET
+    from email.utils import parsedate_to_datetime
+    loc = ("en-US", "US", "US:en") if US else ("en-IN", "IN", "IN:en")
+    r = requests.get("https://news.google.com/rss/search", params={"q": q + " when:7d", "hl": loc[0], "gl": loc[1], "ceid": loc[2]}, headers=UA, timeout=20)
+    out, seen = [], set()
+    for it in ET.fromstring(r.content).iter("item"):
+        title, link = (it.findtext("title") or "").strip(), (it.findtext("link") or "").strip()
+        src = it.find("source"); src = (src.text or "").strip() if src is not None else ""
+        if src and title.endswith(" - " + src): title = title[: -len(src) - 3]
+        try: d = parsedate_to_datetime(it.findtext("pubDate")).astimezone(IST).isoformat(timespec="minutes")
+        except Exception: d = ""
+        if title and link.startswith("http") and title.lower() not in seen:
+            seen.add(title.lower()); out.append({"t": title, "u": link, "p": src, "d": d})
+    out.sort(key=lambda x: x["d"], reverse=True)
+    return out[:n]
+
+def _headlines(key, fallback_ticker):
+    try:
+        got = _rss(NEWS_QUERIES[key])
+        if got: return got
+    except Exception as e:
+        print(f"News feed '{key}' failed: {e}")
+    try:                                        # fallback: Yahoo Finance headlines for a related ticker
+        import yfinance as yf
+        return _news(yf.Ticker(fallback_ticker))
+    except Exception:
+        return []
+
+def _pd(s):
+    s = str(s or "").strip()
+    for f in ("%Y-%m-%d", "%d-%b-%Y", "%d-%m-%Y", "%m/%d/%Y", "%d %b %Y", "%b %d, %Y", "%d/%m/%Y"):
+        try: return dt.datetime.strptime(s, f).date().isoformat()
+        except Exception: pass
+    return None
+
+def _rows(o):
+    """Find the first list called 'rows' anywhere inside a nested JSON value."""
+    if isinstance(o, dict):
+        if isinstance(o.get("rows"), list): return o["rows"]
+        for v in o.values():
+            r = _rows(v)
+            if r: return r
+    return []
+
+def _ipo_nasdaq():
+    import requests
+    out, today = [], dt.datetime.now(IST).date()
+    for ym in {today.strftime("%Y-%m"), (today.replace(day=1) + dt.timedelta(days=32)).strftime("%Y-%m")}:
+        j = requests.get("https://api.nasdaq.com/api/ipo/calendar", params={"date": ym}, headers=UA, timeout=20).json()
+        d = j.get("data") or {}
+        for key in ("upcoming", "priced"):
+            for r in _rows(d.get(key) or {}):
+                day = _pd(r.get("expectedPriceDate") or r.get("pricedDate"))
+                if not day or not r.get("companyName"): continue
+                out.append({"name": r["companyName"], "sym": r.get("proposedTickerSymbol") or r.get("dealSymbol") or "", "exch": r.get("proposedExchange") or "",
+                            "open": day, "close": day, "list": day if key == "priced" else None,
+                            "price": str(r.get("proposedSharePrice") or r.get("price") or ""), "size": str(r.get("dollarValueOfSharesOffered") or ""), "src": "nasdaq"})
+    return out
+
+def _ipo_nse():
+    import requests
+    s = requests.Session(); s.get("https://www.nseindia.com", headers=UA, timeout=20); out = []
+    for url in ("https://www.nseindia.com/api/ipo-current-issue", "https://www.nseindia.com/api/all-upcoming-issues?category=ipo"):
+        j = s.get(url, headers={**UA, "Referer": "https://www.nseindia.com/market-data/all-upcoming-issues-ipo"}, timeout=20).json()
+        for r in (j if isinstance(j, list) else (j.get("data") or [])):
+            g = lambda *ks: next((r[k] for k in ks if r.get(k) not in (None, "")), None)
+            o, c = _pd(g("issueStartDate", "openDate", "issueOpenDate")), _pd(g("issueEndDate", "closeDate", "issueCloseDate"))
+            name = g("companyName", "name")
+            if name and o: out.append({"name": name, "sym": g("symbol") or "", "exch": "NSE", "open": o, "close": c or o, "list": _pd(g("listingDate")),
+                                       "price": str(g("priceBand", "issuePrice") or ""), "size": str(g("issueSize") or ""), "lot": g("lotSize", "minBidQuantity"), "src": "nse"})
+    return out
+
+def fetch_ipos():
+    """New and upcoming IPOs: best-effort fetch from NSE (India) or Nasdaq (US), merged with the list kept in config.json."""
+    items = {}
+    try:
+        for r in (_ipo_nasdaq() if US else _ipo_nse()): items[r["name"].lower()] = r
+    except Exception as e:
+        print(f"IPO calendar fetch failed (add entries to 'ipos' in config.json instead): {e}")
+    for r in _cfg.get("ipos_us" if US else "ipos", []):
+        if r.get("name") and _pd(r.get("open")):
+            r = dict(r); r["src"] = "config"; items[r["name"].lower()] = {**items.get(r["name"].lower(), {}), **r}
+    keep = dt.datetime.now(IST).date() - dt.timedelta(days=30)
+    return sorted((r for r in items.values() if (_pd(r.get("list") or r.get("close") or r.get("open")) or "9999") >= keep.isoformat()), key=lambda r: r.get("open") or "")
+
+def update_news():
+    """Headlines (market trends, gold, silver, IPO) and the IPO calendar -> news.json. Failures are logged and never stop the run."""
+    out, errs = {"updated": dt.datetime.now(IST).isoformat(timespec="minutes")}, {}
+    for key, tick in (("trends", "^GSPC" if US else "^NSEI"), ("gold", "GC=F"), ("silver", "SI=F"), ("ipo", None)):
+        try: out["ipo_news" if key == "ipo" else key] = _headlines(key, tick) if tick else (_rss(NEWS_QUERIES["ipo"], 4))
+        except Exception as e: out["ipo_news" if key == "ipo" else key] = []; errs[key] = str(e)[:100]; print(f"News '{key}' unavailable: {e}")
+    try: out["ipos"] = fetch_ipos()
+    except Exception as e: out["ipos"] = []; errs["ipos"] = str(e)[:100]; print(f"IPOs unavailable: {e}")
+    out["errors"] = errs
+    os.makedirs(DOCS_DIR, exist_ok=True)
+    with open(os.path.join(DOCS_DIR, FN("news.json")), "w") as f: _jd(out, f)
+    print(f"news.json written: {len(out['trends'])} trend, {len(out['gold'])} gold, {len(out['silver'])} silver headlines, {len(out['ipos'])} IPOs")
+
 # ---------- report ----------
 def build_report(demo=False):
     data = load(WATCHLIST, demo)
@@ -527,6 +636,7 @@ def build_report(demo=False):
     avoid = [(s, r) for s, r in ranked[::-1] if r["score"] <= -2][:TOP_N]
     export_json(data, buys, avoid, demo, rows)
     if not demo: update_extra()
+    if not demo: update_news()
     now = dt.datetime.now(IST).strftime(f"%d %b %Y, %I:%M %p {TZN}")
     L = [f"MARKET SIGNALS - {now}" + ("  [DEMO DATA]" if demo else ""), ""]
     L.append("BUY WATCHLIST (ranked)")
