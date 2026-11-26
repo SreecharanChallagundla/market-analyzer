@@ -2,8 +2,9 @@ name: market-live-us
 
 on:
   schedule:
-    - cron: "*/15 13-21 * * 1-5"   # every 15 min during the US session (UTC 13-21), Mon-Fri
-  workflow_dispatch: {}
+    - cron: "*/30 13-20 * * 1-5"   # every 30 min, 13:00-20:30 UTC (covers EST and EDT)
+    - cron: "0 21 * * 1-5"   # 21:00 UTC, after the close
+  workflow_dispatch: {}              # manual runs always do the work, even outside market hours
 
 permissions:
   contents: write
@@ -15,25 +16,41 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
+      - name: Market hours check
+        id: gate
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import datetime as d, zoneinfo as z
+          now = d.datetime.now(z.ZoneInfo("America/New_York"))
+          open_ = now.weekday() < 5 and d.time(9, 30) <= now.time() <= d.time(16, 15)
+          print("open=" + ("true" if open_ else "false"))
+          PY
+
+      - name: Skip (market closed)
+        if: github.event_name != 'workflow_dispatch' && steps.gate.outputs.open != 'true'
+        run: echo "Market is closed right now, nothing to do."
+
       - uses: actions/checkout@v5
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.open == 'true'
 
       - uses: actions/setup-python@v6
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.open == 'true'
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Install dependencies
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.open == 'true'
         run: pip install -r requirements.txt
 
       - name: Fetch live bars
-        env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}       # optional
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}   # optional
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.open == 'true'
         run: python market_agent.py --live --market US
 
       - name: Publish data for the dashboard
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.open == 'true'
         run: |
           git config user.name "market-agent"
           git config user.email "actions@users.noreply.github.com"
