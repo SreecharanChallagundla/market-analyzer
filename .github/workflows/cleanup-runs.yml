@@ -1,0 +1,40 @@
+name: cleanup-runs
+
+# Deletes old workflow run records so the Actions tab stays readable. It keeps the newest
+# runs of every workflow (including GitHub's own "pages build and deployment").
+on:
+  schedule:
+    - cron: "30 21 * * *"            # once a day
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: "How many recent runs to keep per workflow"
+        default: "20"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  prune:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Delete old runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEEP: ${{ inputs.keep || '20' }}
+        run: |
+          set -u
+          for wf in $(gh api "repos/$GITHUB_REPOSITORY/actions/workflows" --paginate --jq '.workflows[].id'); do
+            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/runs?per_page=100" --paginate \
+              --jq '.workflow_runs[] | select(.status=="completed") | .id' \
+              | tail -n +$((KEEP + 1)) \
+              | while read -r id; do
+                  gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/runs/$id" --silent && echo "deleted run $id" || true
+                done
+          done
